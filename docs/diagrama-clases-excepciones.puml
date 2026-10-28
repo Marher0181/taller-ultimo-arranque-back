@@ -1,0 +1,43 @@
+@startuml diagrama-clases-excepciones
+title Diagrama de clases — Jerarquía de excepciones
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam class {
+  BackgroundColor #FDFDFD
+  BorderColor #1F3A5F
+  ArrowColor #1F3A5F
+}
+hide empty members
+
+class RuntimeException
+abstract class TallerException
+class RecursoNoEncontradoException <<404>>
+class CredencialesInvalidasException <<401>>
+class AccesoDenegadoException <<403>>
+class ReglaNegocioException <<422>>
+class DatoInvalidoException <<400>>
+class RegistroDuplicadoException <<409>>
+class RegistroConDependenciasException <<409>>
+class OperacionNoPermitidaException <<409>>
+class InventarioInsuficienteException <<422>> {
+  - disponible : int
+  - solicitado : int
+}
+class IntegridadDatosException <<409>>
+class PersistenciaException <<500>>
+class GeneracionPdfException <<500>>
+
+RuntimeException <|-- TallerException
+TallerException <|-- RecursoNoEncontradoException
+TallerException <|-- CredencialesInvalidasException
+TallerException <|-- AccesoDenegadoException
+TallerException <|-- ReglaNegocioException
+TallerException <|-- IntegridadDatosException
+TallerException <|-- PersistenciaException
+TallerException <|-- GeneracionPdfException
+ReglaNegocioException <|-- DatoInvalidoException
+ReglaNegocioException <|-- RegistroDuplicadoException
+ReglaNegocioException <|-- RegistroConDependenciasException
+ReglaNegocioException <|-- OperacionNoPermitidaException
+ReglaNegocioException <|-- InventarioInsuficienteException
+@enduml

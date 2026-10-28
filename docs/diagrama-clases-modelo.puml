@@ -1,0 +1,294 @@
+@startuml diagrama-clases-modelo
+title Diagrama de clases — Modelo de dominio
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam shadowing false
+skinparam class {
+  BackgroundColor #FDFDFD
+  BorderColor #1F3A5F
+  ArrowColor #1F3A5F
+}
+hide empty members
+
+package "modelo" {
+  abstract class Entidad {
+    - id : Long
+    + getId() : Long
+    + esNueva() : boolean
+    + asignarId(id : long) : void
+    + equals(o : Object) : boolean
+  }
+
+  abstract class Persona {
+    - nombre : String
+    - telefono : String
+    + {abstract} identificacion() : String
+    + {abstract} rol() : String
+    + presentacion() : String
+  }
+
+  class Cliente {
+    - documento : DocumentoIdentidad
+    - correo : String
+    - direccion : String
+    - fechaRegistro : LocalDateTime
+    + {static} nuevo(...) : Cliente
+    + actualizar(...) : void
+    + identificacion() : String
+    + rol() : String
+  }
+
+  class Mecanico {
+    - codigo : String
+    - especialidad : String
+    + actualizar(...) : void
+    + identificacion() : String
+    + rol() : String
+  }
+
+  class Usuario {
+    - username : String
+    - passwordHash : String
+    - activo : boolean
+    - versionToken : int
+    - fechaCreacion : LocalDateTime
+    - ultimoAcceso : LocalDateTime
+    + {static} nuevo(...) : Usuario
+    + asignarRol(rol : Rol, mecanico : Mecanico) : void
+    + cambiarPassword(hash : String) : void
+    + activar() : void
+    + desactivar() : void
+    + sesionVigente(version : int) : boolean
+    + comoResponsable() : Responsable
+    + identificacion() : String
+    + rol() : String
+  }
+
+  enum Rol {
+    ADMIN
+    RECEPCION
+    MECANICO
+    + autoridad() : String
+  }
+
+  class Responsable <<record>> {
+    idUsuario : Long
+    username : String
+    nombre : String
+  }
+
+  class Vehiculo {
+    - placa : String
+    - marca : String
+    - modelo : String
+    - anio : int
+    - color : String
+    + {static} normalizarPlaca(placa : String) : String
+    + actualizar(...) : void
+    + descripcion() : String
+  }
+
+  class Repuesto {
+    - codigo : String
+    - nombre : String
+    - descripcion : String
+    - precio : BigDecimal
+    - existencia : int
+    + abastecer(cantidad : int) : void
+    + descontar(cantidad : int) : void
+    + reintegrar(cantidad : int) : void
+    + nivelInventario(umbral : int) : NivelInventario
+  }
+
+  class ServicioTaller {
+    - codigo : String
+    - descripcion : String
+    - costoManoObra : BigDecimal
+    + actualizar(...) : void
+  }
+
+  enum NivelInventario {
+    AGOTADO
+    BAJO
+    DISPONIBLE
+    + {static} evaluar(existencia : int, umbral : int) : NivelInventario
+  }
+
+  class Validaciones <<utility>> {
+    + {static} requerido(valor : String, campo : String) : String
+    + {static} monto(valor : BigDecimal, campo : String) : BigDecimal
+    + {static} positivo(valor : int, campo : String) : int
+  }
+}
+
+package "modelo.documento" {
+  abstract class DocumentoIdentidad <<sealed>> {
+    - numero : String
+    + {static} crear(tipo : TipoDocumento, numero : String) : DocumentoIdentidad
+    + {abstract} getTipo() : TipoDocumento
+    + {abstract} formateado() : String
+  }
+  class Nit <<final>> {
+    - {static} digitoVerificadorValido(nit : String) : boolean
+    + formateado() : String
+  }
+  class Dpi <<final>> {
+    - {static} ubicacionValida(cui : String) : boolean
+    - {static} digitoVerificadorValido(cui : String) : boolean
+    + formateado() : String
+  }
+  enum TipoDocumento {
+    NIT
+    DPI
+  }
+}
+
+package "modelo.orden" {
+  class OrdenTrabajo {
+    - descripcionProblema : String
+    - fechaCreacion : LocalDateTime
+    - fechaInicio : LocalDateTime
+    - fechaFinalizacion : LocalDateTime
+    - fechaCancelacion : LocalDateTime
+    - motivoCancelacion : String
+    - servicios : List<DetalleServicio>
+    - repuestos : List<DetalleRepuesto>
+    + {static} nueva(v : Vehiculo, m : Mecanico, desc : String, r : Responsable) : OrdenTrabajo
+    + actualizarDatos(m : Mecanico, desc : String) : void
+    + agregarServicio(s : ServicioTaller) : DetalleServicio
+    + quitarServicio(idServicio : long) : DetalleServicio
+    + iniciar(r : Responsable) : void
+    + asignarRepuesto(r : Repuesto, cantidad : int) : DetalleRepuesto
+    + retirarRepuesto(idDetalle : long, r : Repuesto) : DetalleRepuesto
+    + finalizar(tasaIva : BigDecimal, r : Responsable) : Comprobante
+    + cancelar(motivo : String, inventario : Map<Long, Repuesto>, r : Responsable) : void
+    + estaAsignadaA(idMecanico : Long) : boolean
+    + calcularCostos(tasaIva : BigDecimal) : ResumenCostos
+    + getEstado() : EstadoOrden
+  }
+
+  abstract class EstadoOrdenTrabajo {
+    + {abstract} codigo() : EstadoOrden
+    + admiteModificaciones() : boolean
+    ~ agregarServicio(...) : DetalleServicio
+    ~ iniciar(o : OrdenTrabajo) : void
+    ~ asignarRepuesto(...) : DetalleRepuesto
+    ~ retirarRepuesto(...) : DetalleRepuesto
+    ~ finalizar(...) : Comprobante
+    ~ cancelar(...) : void
+    # rechazar(accion : String) : OperacionNoPermitidaException
+  }
+  abstract class EstadoActivo {
+    + admiteModificaciones() : boolean
+    ~ agregarServicio(...) : DetalleServicio
+    ~ cancelar(...) : void
+  }
+  class EstadoPendiente <<final>> {
+    ~ iniciar(o : OrdenTrabajo) : void
+  }
+  class EstadoEnProceso <<final>> {
+    ~ asignarRepuesto(...) : DetalleRepuesto
+    ~ retirarRepuesto(...) : DetalleRepuesto
+    ~ finalizar(...) : Comprobante
+  }
+  class EstadoFinalizada <<final>>
+  class EstadoCancelada <<final>>
+
+  enum EstadoOrden {
+    PENDIENTE
+    EN_PROCESO
+    FINALIZADA
+    CANCELADA
+  }
+
+  class DetalleServicio {
+    - costoManoObra : BigDecimal
+    - fechaRegistro : LocalDateTime
+  }
+
+  class DetalleRepuesto {
+    - cantidad : int
+    - precioUnitario : BigDecimal
+    - fechaAsignacion : LocalDateTime
+    + subtotal() : BigDecimal
+  }
+
+  class Comprobante {
+    - numero : String
+    - fechaEmision : LocalDateTime
+  }
+
+  class ResumenCostos <<record>> {
+    manoObra : BigDecimal
+    repuestos : BigDecimal
+    subtotal : BigDecimal
+    tasaIva : BigDecimal
+    iva : BigDecimal
+    total : BigDecimal
+    + {static} calcular(...) : ResumenCostos
+  }
+}
+
+Entidad <|-- Persona
+Persona <|-- Cliente
+Persona <|-- Mecanico
+Persona <|-- Usuario
+Usuario --> "1" Rol
+Usuario "0..1" --> "0..1" Mecanico : vinculado
+OrdenTrabajo --> "1..3" Responsable : registrada / iniciada / cerrada por
+Entidad <|-- Vehiculo
+Entidad <|-- Repuesto
+Entidad <|-- ServicioTaller
+Entidad <|-- OrdenTrabajo
+Entidad <|-- DetalleRepuesto
+
+DocumentoIdentidad <|-- Nit
+DocumentoIdentidad <|-- Dpi
+DocumentoIdentidad ..> TipoDocumento
+Cliente *-- "1" DocumentoIdentidad
+
+Vehiculo "0..*" --> "1" Cliente : propietario
+OrdenTrabajo "0..*" --> "1" Vehiculo
+OrdenTrabajo "0..*" --> "1" Mecanico
+OrdenTrabajo *-- "1" EstadoOrdenTrabajo : estado
+OrdenTrabajo *-- "0..*" DetalleServicio
+OrdenTrabajo *-- "0..*" DetalleRepuesto
+OrdenTrabajo *-- "0..1" Comprobante
+Comprobante *-- "1" ResumenCostos
+DetalleServicio --> "1" ServicioTaller
+DetalleRepuesto --> "1" Repuesto
+Repuesto ..> NivelInventario
+
+EstadoOrdenTrabajo <|-- EstadoActivo
+EstadoActivo <|-- EstadoPendiente
+EstadoActivo <|-- EstadoEnProceso
+EstadoOrdenTrabajo <|-- EstadoFinalizada
+EstadoOrdenTrabajo <|-- EstadoCancelada
+EstadoOrdenTrabajo ..> EstadoOrden
+package "modelo.bitacora" {
+  class EntradaBitacora <<record>> {
+    fecha : LocalDateTime
+    idUsuario : Long
+    usuario : String
+    idEntidad : Long
+    detalle : String
+    direccionIp : String
+  }
+  enum Accion {
+    INICIO_SESION
+    CREAR
+    MODIFICAR
+    ASIGNAR_REPUESTO
+    FINALIZAR_ORDEN
+    ...
+  }
+  enum EntidadBitacora {
+    SESION
+    USUARIO
+    ORDEN
+    ...
+  }
+}
+EntradaBitacora --> Accion
+EntradaBitacora --> EntidadBitacora
+@enduml

@@ -1,0 +1,27 @@
+@startuml diagrama-estados-orden
+title Ciclo de vida de una orden de trabajo
+skinparam shadowing false
+skinparam state {
+  BackgroundColor #FDFDFD
+  BorderColor #1F3A5F
+  ArrowColor #1F3A5F
+}
+
+[*] --> PENDIENTE : crear(vehículo, mecánico, problema)
+PENDIENTE : agregar / quitar servicios
+PENDIENTE : modificar mecánico y descripción
+EN_PROCESO : agregar / quitar servicios
+EN_PROCESO : asignar repuesto (valida y descuenta en una transacción)
+EN_PROCESO : retirar repuesto (reintegra unidades)
+FINALIZADA : comprobante emitido (mano de obra + repuestos + IVA)
+CANCELADA : repuestos reintegrados al inventario
+
+PENDIENTE --> EN_PROCESO : iniciar()
+EN_PROCESO --> FINALIZADA : finalizar() [tiene servicios]
+PENDIENTE --> CANCELADA : cancelar()
+EN_PROCESO --> CANCELADA : cancelar()
+FINALIZADA --> [*]
+CANCELADA --> [*]
+note right of FINALIZADA : No admite modificaciones
+note right of CANCELADA : No admite modificaciones
+@enduml

@@ -1,0 +1,170 @@
+@startuml diagrama-clases-arquitectura
+title Diagrama de clases — Arquitectura MVC por capas
+allowmixing
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam class {
+  BackgroundColor #FDFDFD
+  BorderColor #1F3A5F
+  ArrowColor #1F3A5F
+}
+hide empty members
+left to right direction
+
+package "controlador (Controlador)" {
+  class OrdenTrabajoController <<RestController>> {
+    + crear(...) : OrdenResponse
+    + iniciar(id) : OrdenResponse
+    + asignarRepuesto(...) : OrdenResponse
+    + finalizar(id) : OrdenResponse
+    + cancelar(...) : OrdenResponse
+    + descargarComprobante(id) : ResponseEntity<byte[]>
+  }
+  class ReporteController <<RestController>>
+  class ClienteController <<RestController>>
+  class "VehiculoController\nMecanicoController\nRepuestoController\nServicioTallerController" as OtrosControladores <<RestController>>
+  class AutenticacionController <<RestController>> {
+    + iniciarSesion(LoginRequest) : SesionResponse
+    + perfil() : UsuarioResponse
+    + cambiarPassword(...) : SesionResponse
+  }
+  class "UsuarioController\nBitacoraController" as ControladoresAdmin <<RestController>>
+  class ManejadorExcepciones <<RestControllerAdvice>>
+}
+
+package "vista (Vista)" {
+  package "dto" {
+    class "OrdenResponse\nClienteResponse\n...Request / ...Response" as Dtos <<record>>
+  }
+  package "pdf" {
+    abstract class DocumentoPdf {
+      + generar() : byte[]
+      + {abstract} nombreArchivo() : String
+      # {abstract} titulo() : String
+      # {abstract} agregarContenido(d : Document) : void
+      # tamanioPagina() : Rectangle
+    }
+    class ComprobantePdf
+    class ReporteOrdenesPorEstadoPdf
+    class HistorialVehiculoPdf
+    class RepuestosBajoInventarioPdf
+    class OrdenesPorMecanicoPdf
+    class IngresosPdf
+  }
+}
+
+package "servicio (Modelo: lógica de negocio)" {
+  class OrdenTrabajoService <<Service>>
+  class ReporteService <<Service>>
+  class ClienteService <<Service>>
+  class "VehiculoService\nMecanicoService\nRepuestoService\nServicioTallerService" as OtrosServicios <<Service>>
+  class AutenticacionService <<Service>> {
+    + iniciarSesion(username, password) : SesionIniciada
+    + validarSesion(id, version) : Optional<UsuarioAutenticado>
+    + cambiarPassword(actual, nueva) : SesionIniciada
+  }
+  class "UsuarioService\nBitacoraService" as ServiciosAdmin <<Service>>
+  class Auditoria <<Component>> {
+    + registrar(c, accion, entidad, id, detalle) : void
+  }
+}
+
+package "seguridad" {
+  class ConfiguracionSeguridad <<Configuration>> {
+    + cadenaSeguridad(HttpSecurity) : SecurityFilterChain
+    + codificadorPassword() : PasswordEncoder
+    + codificadorJwt() : JwtEncoder
+    + decodificadorJwt() : JwtDecoder
+  }
+  interface EmisorToken {
+    + emitir(u : Usuario) : TokenEmitido
+  }
+  interface SesionUsuario {
+    + actual() : UsuarioAutenticado
+    + direccionIp() : String
+  }
+  class JwtEmisorToken <<Component>>
+  class SesionUsuarioSpring <<Component>>
+  class ConvertidorJwtUsuario {
+    + convert(jwt : Jwt) : AbstractAuthenticationToken
+  }
+  class RespuestaErrorSeguridad <<Component>>
+  class UsuarioAutenticado <<record>>
+}
+
+package "dao (Modelo: acceso a datos)" {
+  class GestorTransacciones <<Component>> {
+    + consultar(op : OperacionJdbc<T>) : T
+    + enTransaccion(op : OperacionJdbc<T>) : T
+    + ejecutarEnTransaccion(a : AccionJdbc) : void
+  }
+  interface "OperacionJdbc<T>" as OperacionJdbc {
+    + ejecutar(c : Connection) : T
+  }
+  abstract class "JdbcDao<T>" as JdbcDao {
+    # {abstract} mapear(rs : ResultSet) : T
+    # consultarLista(...) : List<T>
+    # consultarUno(...) : Optional<T>
+    # insertarConClave(...) : long
+    # ejecutarActualizacion(...) : int
+  }
+  class OrdenTrabajoDao <<Repository>>
+  class OrdenConsultaDao <<Repository>>
+  class "ClienteDao, VehiculoDao, MecanicoDao,\nRepuestoDao, ServicioTallerDao,\nDetalleServicioDao, DetalleRepuestoDao,\nComprobanteDao, UsuarioDao, BitacoraDao" as OtrosDao <<Repository>>
+}
+
+package "modelo (Modelo: dominio)" {
+  class OrdenTrabajo
+  class "Cliente, Vehiculo, Mecanico,\nRepuesto, ServicioTaller" as Entidades
+}
+
+database "MySQL" as BD
+
+DocumentoPdf <|-- ComprobantePdf
+DocumentoPdf <|-- ReporteOrdenesPorEstadoPdf
+DocumentoPdf <|-- HistorialVehiculoPdf
+DocumentoPdf <|-- RepuestosBajoInventarioPdf
+DocumentoPdf <|-- OrdenesPorMecanicoPdf
+DocumentoPdf <|-- IngresosPdf
+
+JdbcDao <|-- OrdenTrabajoDao
+JdbcDao <|-- OrdenConsultaDao
+JdbcDao <|-- OtrosDao
+
+OrdenTrabajoController --> OrdenTrabajoService
+OrdenTrabajoController ..> ComprobantePdf : crea
+OrdenTrabajoController ..> Dtos
+ReporteController --> ReporteService
+ReporteController ..> DocumentoPdf : crea
+ClienteController --> ClienteService
+OtrosControladores --> OtrosServicios
+
+AutenticacionController --> AutenticacionService
+ControladoresAdmin --> ServiciosAdmin
+EmisorToken <|.. JwtEmisorToken
+SesionUsuario <|.. SesionUsuarioSpring
+ConfiguracionSeguridad ..> ConvertidorJwtUsuario : crea
+ConfiguracionSeguridad ..> RespuestaErrorSeguridad
+ConvertidorJwtUsuario --> AutenticacionService : valida versión y estado
+AutenticacionService --> EmisorToken
+AutenticacionService --> Auditoria
+ServiciosAdmin --> Auditoria
+OrdenTrabajoService --> Auditoria
+OrdenTrabajoService --> SesionUsuario : responsable y acceso
+Auditoria --> SesionUsuario
+Auditoria --> OtrosDao
+SesionUsuarioSpring ..> UsuarioAutenticado
+OrdenTrabajoService --> GestorTransacciones
+OrdenTrabajoService --> OrdenTrabajoDao
+OrdenTrabajoService --> OtrosDao
+OrdenTrabajoService ..> OrdenTrabajo
+ReporteService --> OrdenConsultaDao
+ClienteService --> OtrosDao
+OtrosServicios --> OtrosDao
+GestorTransacciones ..> OperacionJdbc
+OrdenTrabajoDao ..> OrdenTrabajo : reconstruye
+OtrosDao ..> Entidades
+GestorTransacciones --> BD : DataSource / JDBC
+JdbcDao --> BD : PreparedStatement
+@enduml

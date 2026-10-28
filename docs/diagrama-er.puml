@@ -1,0 +1,149 @@
+@startuml diagrama-er
+title Diagrama entidad-relación — taller_ultimo_arranque
+hide circle
+skinparam linetype ortho
+skinparam shadowing false
+skinparam class {
+  BackgroundColor #FDFDFD
+  BorderColor #1F3A5F
+  ArrowColor #1F3A5F
+}
+
+entity "cliente" as cliente {
+  * id_cliente : BIGINT <<PK>>
+  --
+  * tipo_documento : ENUM('NIT','DPI') <<UQ1>>
+  * numero_documento : VARCHAR(20) <<UQ1>>
+  * nombre : VARCHAR(120)
+  telefono : VARCHAR(20)
+  correo : VARCHAR(120)
+  direccion : VARCHAR(200)
+  * fecha_registro : DATETIME
+}
+
+entity "mecanico" as mecanico {
+  * id_mecanico : BIGINT <<PK>>
+  --
+  * codigo : VARCHAR(20) <<UQ>>
+  * nombre : VARCHAR(120)
+  especialidad : VARCHAR(80)
+  telefono : VARCHAR(20)
+}
+
+entity "usuario" as usuario {
+  * id_usuario : BIGINT <<PK>>
+  --
+  * username : VARCHAR(50) <<UQ>>
+  * nombre : VARCHAR(120)
+  * password_hash : VARCHAR(100)
+  * rol : ENUM('ADMIN','RECEPCION','MECANICO')
+  id_mecanico : BIGINT <<FK, UQ>>
+  * activo : BOOLEAN
+  * version_token : INT
+  * fecha_creacion : DATETIME
+  ultimo_acceso : DATETIME
+}
+
+entity "bitacora" as bitacora {
+  * id_bitacora : BIGINT <<PK>>
+  --
+  * fecha : DATETIME
+  id_usuario : BIGINT <<FK>>
+  * usuario : VARCHAR(50)
+  * accion : VARCHAR(40)
+  * entidad : VARCHAR(20)
+  id_entidad : BIGINT
+  detalle : VARCHAR(500)
+  direccion_ip : VARCHAR(45)
+}
+
+entity "vehiculo" as vehiculo {
+  * id_vehiculo : BIGINT <<PK>>
+  --
+  * placa : VARCHAR(10) <<UQ>>
+  * marca : VARCHAR(50)
+  * modelo : VARCHAR(50)
+  * anio : SMALLINT
+  color : VARCHAR(30)
+  * id_cliente : BIGINT <<FK>>
+}
+
+entity "repuesto" as repuesto {
+  * id_repuesto : BIGINT <<PK>>
+  --
+  * codigo : VARCHAR(30) <<UQ>>
+  * nombre : VARCHAR(100)
+  descripcion : VARCHAR(255)
+  * precio : DECIMAL(10,2)  [CHECK ≥ 0]
+  * existencia : INT  [CHECK ≥ 0]
+}
+
+entity "servicio_taller" as servicio {
+  * id_servicio : BIGINT <<PK>>
+  --
+  * codigo : VARCHAR(20) <<UQ>>
+  * descripcion : VARCHAR(150)
+  * costo_mano_obra : DECIMAL(10,2)  [CHECK ≥ 0]
+}
+
+entity "orden_trabajo" as orden {
+  * id_orden : BIGINT <<PK>>
+  --
+  * id_vehiculo : BIGINT <<FK>>
+  * id_mecanico : BIGINT <<FK>>
+  * descripcion_problema : VARCHAR(500)
+  * estado : ENUM(PENDIENTE, EN_PROCESO, FINALIZADA, CANCELADA)
+  * fecha_creacion : DATETIME
+  fecha_inicio : DATETIME
+  fecha_finalizacion : DATETIME
+  fecha_cancelacion : DATETIME
+  motivo_cancelacion : VARCHAR(255)
+  * id_usuario_registro : BIGINT <<FK>>
+  id_usuario_inicio : BIGINT <<FK>>
+  id_usuario_cierre : BIGINT <<FK>>
+}
+
+entity "detalle_servicio" as det_servicio {
+  * id_orden : BIGINT <<PK, FK>>
+  * id_servicio : BIGINT <<PK, FK>>
+  --
+  * costo_mano_obra : DECIMAL(10,2)
+  * fecha_registro : DATETIME
+}
+
+entity "detalle_repuesto" as det_repuesto {
+  * id_detalle_repuesto : BIGINT <<PK>>
+  --
+  * id_orden : BIGINT <<FK>>
+  * id_repuesto : BIGINT <<FK>>
+  * cantidad : INT  [CHECK > 0]
+  * precio_unitario : DECIMAL(10,2)
+  * fecha_asignacion : DATETIME
+}
+
+entity "comprobante" as comprobante {
+  * id_comprobante : BIGINT <<PK>>
+  --
+  * id_orden : BIGINT <<FK, UQ>>
+  * numero : VARCHAR(20) <<UQ>>
+  * fecha_emision : DATETIME
+  * total_mano_obra : DECIMAL(12,2)
+  * total_repuestos : DECIMAL(12,2)
+  * subtotal : DECIMAL(12,2)
+  * tasa_iva : DECIMAL(5,4)
+  * iva : DECIMAL(12,2)
+  * total : DECIMAL(12,2)
+}
+
+cliente ||--o{ vehiculo : posee
+vehiculo ||--o{ orden : recibe
+mecanico ||--o{ orden : atiende
+orden ||--o{ det_servicio : incluye
+servicio ||--o{ det_servicio : se presta en
+orden ||--o{ det_repuesto : consume
+repuesto ||--o{ det_repuesto : se usa en
+orden ||--o| comprobante : genera
+mecanico |o--o| usuario : cuenta de
+usuario ||--o{ orden : registra / inicia / cierra
+usuario |o--o{ bitacora : realiza
+@enduml
