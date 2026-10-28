@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: head('Error')}"></head>
+<body>
+<main class="container" style="padding-top: 3rem;">
+    <article>
+        <h1 th:text="${status == 403} ? 'Acceso denegado' : (${status == 404} ? 'Página no encontrada' : 'Ocurrió un error')">Ocurrió un error</h1>
+        <p th:text="${status == 403} ? 'Su rol no tiene permiso para esta sección.' : (${mensaje} ?: 'No se pudo completar la solicitud.')">
+            No se pudo completar la solicitud.
+        </p>
+        <a th:href="@{/}" role="button">Volver al inicio</a>
+    </article>
+</main>
+</body>
+</html>

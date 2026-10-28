@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: head('Nueva orden')}"></head>
+<body>
+<header th:replace="~{fragmentos :: menu}"></header>
+<main class="container">
+    <h2>Nueva orden de trabajo</h2>
+    <form method="post" th:action="@{/ordenes}">
+        <div class="fila">
+            <label>Vehículo
+                <select name="idVehiculo" required>
+                    <option value="">Seleccione un vehículo</option>
+                    <option th:each="v : ${vehiculos}" th:value="${v.id()}"
+                            th:text="${v.placa()} + ' · ' + ${v.marca()} + ' ' + ${v.modelo()} + ' (' + ${v.nombreCliente()} + ')'"
+                            th:selected="${v.id() == idVehiculoSugerido}"></option>
+                </select>
+            </label>
+            <label>Mecánico asignado
+                <select name="idMecanico" required>
+                    <option value="">Seleccione un mecánico</option>
+                    <option th:each="m : ${mecanicos}" th:value="${m.id()}" th:text="${m.codigo()} + ' · ' + ${m.nombre()}"></option>
+                </select>
+            </label>
+        </div>
+        <label>Descripción del problema
+            <textarea name="descripcionProblema" required maxlength="500" rows="3"></textarea>
+        </label>
+        <fieldset>
+            <legend>Servicios iniciales (opcional)</legend>
+            <label th:each="s : ${servicios}">
+                <input type="checkbox" name="serviciosIds" th:value="${s.id()}">
+                <span th:text="${s.codigo()} + ' · ' + ${s.descripcion()} + ' (Q ' + ${#numbers.formatDecimal(s.costoManoObra(), 1, 'COMMA', 2, 'POINT')} + ')'"></span>
+            </label>
+        </fieldset>
+        <button type="submit">Crear orden</button>
+        <a th:href="@{/ordenes}">Cancelar</a>
+    </form>
+</main>
+</body>
+</html>

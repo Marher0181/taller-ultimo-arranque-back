@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: head('Repuestos')}"></head>
+<body>
+<header th:replace="~{fragmentos :: menu}"></header>
+<main class="container" th:with="puedeEditar=${sesionActual.rol().name() != 'MECANICO'}">
+    <div class="fila">
+        <h2>Repuestos</h2>
+        <div style="text-align: right;" th:if="${puedeEditar}">
+            <a th:href="@{/repuestos/nuevo}" role="button">Nuevo repuesto</a>
+        </div>
+    </div>
+    <form method="get" role="search">
+        <select name="nivel" aria-label="Nivel de inventario">
+            <option value="">Todos los niveles</option>
+            <option th:each="n : ${niveles}" th:value="${n}" th:text="${n}" th:selected="${n == nivel}"></option>
+        </select>
+        <button type="submit">Filtrar</button>
+    </form>
+    <div class="overflow-auto">
+        <table class="striped">
+            <thead><tr><th>Código</th><th>Nombre</th><th class="numero">Precio</th><th class="numero">Existencia</th><th>Nivel</th><th th:if="${puedeEditar}"></th></tr></thead>
+            <tbody>
+            <tr th:each="r : ${repuestos}">
+                <td th:text="${r.codigo()}"></td>
+                <td th:text="${r.nombre()}" th:title="${r.descripcion()}"></td>
+                <td class="numero" th:text="'Q ' + ${#numbers.formatDecimal(r.precio(), 1, 'COMMA', 2, 'POINT')}"></td>
+                <td class="numero" th:text="${r.existencia()}"></td>
+                <td><span class="estado" th:text="${r.nivelInventario()}"
+                          th:style="${r.nivelInventario().name() == 'DISPONIBLE'} ? '' : 'color:#b3261e'"></span></td>
+                <td th:if="${puedeEditar}">
+                    <form th:action="@{/repuestos/{id}/abastecer(id=${r.id()})}" method="post" role="group" style="display:flex; max-width: 14rem;">
+                        <input type="number" name="cantidad" min="1" required placeholder="Cant." aria-label="Cantidad a abastecer"
+                               style="padding: .25rem .5rem; margin: 0;">
+                        <button type="submit" class="outline">Abastecer</button>
+                    </form>
+                    <a th:href="@{/repuestos/{id}/editar(id=${r.id()})}" role="button" class="secondary">Editar</a>
+                </td>
+            </tr>
+            <tr th:if="${repuestos.isEmpty()}"><td colspan="6">No hay repuestos para mostrar.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

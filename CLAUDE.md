@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Spring Boot 3.5 / Java 21 REST API for a mechanic workshop ("El Último Arranque"): clients, vehicles, mechanics, parts, services, work orders, receipts and PDF reports. MySQL via **explicit JDBC** (no JPA, no `@Transactional`). JWT auth. All code, identifiers, messages and docs are in **Spanish**; keep new code in Spanish too. `README.md` has the full endpoint list, role/permission matrix and order state table.
+Spring Boot 3.5 / Java 21 REST API plus a server-rendered Thymeleaf web UI for a mechanic workshop ("El Último Arranque"): clients, vehicles, mechanics, parts, services, work orders, receipts and PDF reports. MySQL via **explicit JDBC** (no JPA, no `@Transactional`). JWT auth. All code, identifiers, messages and docs are in **Spanish**; keep new code in Spanish too. `README.md` has the full endpoint list, role/permission matrix and order state table.
 
 ## Commands
 
@@ -37,6 +37,8 @@ Package root `gt.umg.ultimoarranque`, layered as `controlador` → `servicio` �
 Tokens are HS256 JWTs; each request also re-reads the user from DB and compares `version_token`, so deactivation / password or role change invalidates old tokens immediately. Get the current user via the `SesionUsuario` interface (`sesion.actual()`), not Spring's `SecurityContextHolder`.
 
 **Errors:** throw subclasses of `excepcion.TallerException`; `controlador/ManejadorExcepciones` maps them to `application/problem+json` with the status codes listed in README (404 not found, 409 conflict/state, 422 business rule, etc.).
+
+**Web UI (Thymeleaf):** `controlador/web/*WebController` + `src/main/resources/templates` (Pico.css from CDN, layout in `templates/fragmentos.html`). Same services as the API; forms are only GET/POST, so deletes/actions are `POST /x/{id}/accion`. A second `SecurityFilterChain` (`@Order(2)`, session + form login + CSRF) covers everything outside `/api/**`; `ProveedorAutenticacionWeb` reuses `AutenticacionService.iniciarSesion` and `FiltroSesionWeb` re-checks `version_token` per request. `ManejadorExcepcionesWeb` (scoped to `controlador.web`) turns `TallerException`/validation errors into a flash `mensajeError` + redirect to the Referer path, and exposes `sesionActual` to templates. Records are read in templates with method syntax (`${c.nombre()}`). Keep the web URL rules in `reglasDeAccesoWeb` aligned with the API rules.
 
 **PDFs:** `vista/pdf`, Template Method — subclass `DocumentoPdf` and implement `agregarContenido()`. Reports are exposed as both JSON (for the Android client) and `/pdf` variants under `/api/reportes/**`.
 

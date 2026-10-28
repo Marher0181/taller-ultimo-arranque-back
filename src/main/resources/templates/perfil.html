@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: head('Mi cuenta')}"></head>
+<body>
+<header th:replace="~{fragmentos :: menu}"></header>
+<main class="container" style="max-width: 36rem;">
+    <h2>Mi cuenta</h2>
+    <p>
+        <strong th:text="${perfil.nombre()}"></strong> (<span th:text="${perfil.username()}"></span>)<br>
+        Rol: <span th:text="${perfil.rol().etiqueta}"></span>
+        <span th:if="${perfil.mecanico() != null}" th:text="'· ' + ${perfil.mecanico()}"></span>
+    </p>
+    <h3>Cambiar contraseña</h3>
+    <form method="post" th:action="@{/perfil/password}">
+        <label>Contraseña actual
+            <input type="password" name="passwordActual" required autocomplete="current-password">
+        </label>
+        <label>Nueva contraseña
+            <input type="password" name="passwordNueva" required minlength="8" maxlength="72" autocomplete="new-password">
+            <small>Entre 8 y 72 caracteres, con letras y números. Al guardar deberá iniciar sesión de nuevo.</small>
+        </label>
+        <button type="submit">Cambiar contraseña</button>
+    </form>
+</main>
+</body>
+</html>

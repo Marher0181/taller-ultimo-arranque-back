@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: head('Orden #' + ${orden.id()})}"></head>
+<body>
+<header th:replace="~{fragmentos :: menu}"></header>
+<main class="container"
+      th:with="rol=${sesionActual.rol().name()}, estado=${orden.estado().name()}, activa=${orden.admiteModificaciones()},
+               esRecepcion=${rol == 'RECEPCION'}, esMecanico=${rol == 'MECANICO'}">
+    <p><a th:href="@{/ordenes}">← Órdenes</a></p>
+    <h2>Orden #<span th:text="${orden.id()}"></span> · <span th:text="${orden.estado().etiqueta}"></span></h2>
+
+    <article>
+        <div class="fila">
+            <div>
+                <strong>Vehículo</strong><br>
+                <span th:text="${orden.vehiculo().placa()} + ' · ' + ${orden.vehiculo().marca()} + ' ' + ${orden.vehiculo().modelo()} + ' ' + ${orden.vehiculo().anio()}"></span><br>
+                <small th:text="'Cliente: ' + ${orden.vehiculo().nombreCliente()}"></small>
+            </div>
+            <div>
+                <strong>Mecánico</strong><br>
+                <span th:text="${orden.mecanico().codigo()} + ' · ' + ${orden.mecanico().nombre()}"></span>
+            </div>
+            <div>
+                <strong>Fechas</strong><br>
+                <small>Creada: <span th:text="${#temporals.format(orden.fechaCreacion(), 'dd/MM/yyyy HH:mm')}"></span>
+                    <span th:if="${orden.registradaPor() != null}" th:text="'por ' + ${orden.registradaPor().descripcion()}"></span></small><br>
+                <small th:if="${orden.fechaInicio() != null}">Iniciada: <span th:text="${#temporals.format(orden.fechaInicio(), 'dd/MM/yyyy HH:mm')}"></span>
+                    <span th:if="${orden.iniciadaPor() != null}" th:text="'por ' + ${orden.iniciadaPor().descripcion()}"></span><br></small>
+                <small th:if="${orden.fechaFinalizacion() != null}">Finalizada: <span th:text="${#temporals.format(orden.fechaFinalizacion(), 'dd/MM/yyyy HH:mm')}"></span><br></small>
+                <small th:if="${orden.fechaCancelacion() != null}">Cancelada: <span th:text="${#temporals.format(orden.fechaCancelacion(), 'dd/MM/yyyy HH:mm')}"></span>
+                    <span th:if="${orden.motivoCancelacion() != null}" th:text="'· ' + ${orden.motivoCancelacion()}"></span></small>
+            </div>
+        </div>
+        <p><strong>Problema reportado:</strong> <span th:text="${orden.descripcionProblema()}"></span></p>
+
+        <details th:if="${activa and !esMecanico}">
+            <summary>Modificar mecánico o descripción</summary>
+            <form method="post" th:action="@{/ordenes/{id}(id=${orden.id()})}">
+                <label>Mecánico
+                    <select name="idMecanico" required>
+                        <option th:each="m : ${mecanicos}" th:value="${m.id()}" th:text="${m.codigo()} + ' · ' + ${m.nombre()}"
+                                th:selected="${m.id() == orden.mecanico().id()}"></option>
+                    </select>
+                </label>
+                <label>Descripción del problema
+                    <textarea name="descripcionProblema" required maxlength="500" rows="3" th:text="${orden.descripcionProblema()}"></textarea>
+                </label>
+                <button type="submit">Guardar cambios</button>
+            </form>
+        </details>
+    </article>
+
+    <h3>Servicios</h3>
+    <div class="overflow-auto">
+        <table class="striped">
+            <thead><tr><th>Código</th><th>Descripción</th><th class="numero">Mano de obra</th><th th:if="${activa}"></th></tr></thead>
+            <tbody>
+            <tr th:each="s : ${orden.servicios()}">
+                <td th:text="${s.codigo()}"></td>
+                <td th:text="${s.descripcion()}"></td>
+                <td class="numero" th:text="'Q ' + ${#numbers.formatDecimal(s.costoManoObra(), 1, 'COMMA', 2, 'POINT')}"></td>
+                <td th:if="${activa}">
+                    <form th:action="@{/ordenes/{id}/servicios/{s}/quitar(id=${orden.id()}, s=${s.idServicio()})}" method="post">
+                        <button type="submit" class="secondary outline">Quitar</button>
+                    </form>
+                </td>
+            </tr>
+            <tr th:if="${orden.servicios().isEmpty()}"><td colspan="4">Sin servicios registrados.</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <form th:if="${activa}" method="post" th:action="@{/ordenes/{id}/servicios(id=${orden.id()})}" role="group">
+        <select name="idServicio" required aria-label="Servicio">
+            <option value="">Agregar servicio…</option>
+            <option th:each="s : ${servicios}" th:value="${s.id()}"
+                    th:text="${s.codigo()} + ' · ' + ${s.descripcion()} + ' (Q ' + ${#numbers.formatDecimal(s.costoManoObra(), 1, 'COMMA', 2, 'POINT')} + ')'"></option>
+        </select>
+        <button type="submit">Agregar</button>
+    </form>
+
+    <h3>Repuestos</h3>
+    <div class="overflow-auto">
+        <table class="striped">
+            <thead><tr><th>Código</th><th>Nombre</th><th class="numero">Cantidad</th><th class="numero">Precio</th><th class="numero">Subtotal</th>
+                <th th:if="${estado == 'EN_PROCESO' and !esRecepcion}"></th></tr></thead>
+            <tbody>
+            <tr th:each="r : ${orden.repuestos()}">
+                <td th:text="${r.codigo()}"></td>
+                <td th:text="${r.nombre()}"></td>
+                <td class="numero" th:text="${r.cantidad()}"></td>
+                <td class="numero" th:text="'Q ' + ${#numbers.formatDecimal(r.precioUnitario(), 1, 'COMMA', 2, 'POINT')}"></td>
+                <td class="numero" th:text="'Q ' + ${#numbers.formatDecimal(r.subtotal(), 1, 'COMMA', 2, 'POINT')}"></td>
+                <td th:if="${estado == 'EN_PROCESO' and !esRecepcion}">
+                    <form th:action="@{/ordenes/{id}/repuestos/{d}/retirar(id=${orden.id()}, d=${r.idDetalle()})}" method="post">
+                        <button type="submit" class="secondary outline">Retirar</button>
+                    </form>
+                </td>
+            </tr>
+            <tr th:if="${orden.repuestos().isEmpty()}"><td colspan="6">Sin repuestos asignados.</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <form th:if="${estado == 'EN_PROCESO' and !esRecepcion}" method="post"
+          th:action="@{/ordenes/{id}/repuestos(id=${orden.id()})}" role="group">
+        <select name="idRepuesto" required aria-label="Repuesto">
+            <option value="">Asignar repuesto…</option>
+            <option th:each="r : ${repuestos}" th:value="${r.id()}" th:disabled="${r.existencia() == 0}"
+                    th:text="${r.codigo()} + ' · ' + ${r.nombre()} + ' (existencia: ' + ${r.existencia()} + ')'"></option>
+        </select>
+        <input type="number" name="cantidad" min="1" value="1" required aria-label="Cantidad" style="max-width: 7rem;">
+        <button type="submit">Asignar</button>
+    </form>
+    <p th:if="${estado == 'PENDIENTE'}"><small>Los repuestos se asignan cuando la orden está en proceso.</small></p>
+
+    <h3>Costos</h3>
+    <table style="max-width: 26rem;">
+        <tbody>
+        <tr><td>Mano de obra</td><td class="numero" th:text="'Q ' + ${#numbers.formatDecimal(orden.costos().manoObra(), 1, 'COMMA', 2, 'POINT')}"></td></tr>
+        <tr><td>Repuestos</td><td class="numero" th:text="'Q ' + ${#numbers.formatDecimal(orden.costos().repuestos(), 1, 'COMMA', 2, 'POINT')}"></td></tr>
+        <tr><td>Subtotal</td><td class="numero" th:text="'Q ' + ${#numbers.formatDecimal(orden.costos().subtotal(), 1, 'COMMA', 2, 'POINT')}"></td></tr>
+        <tr><td>IVA</td><td class="numero" th:text="'Q ' + ${#numbers.formatDecimal(orden.costos().iva(), 1, 'COMMA', 2, 'POINT')}"></td></tr>
+        <tr><th><strong>Total</strong></th><th class="numero"><strong th:text="'Q ' + ${#numbers.formatDecimal(orden.costos().total(), 1, 'COMMA', 2, 'POINT')}"></strong></th></tr>
+        </tbody>
+    </table>
+
+    <article th:if="${orden.comprobante() != null}">
+        <strong>Comprobante <span th:text="${orden.comprobante().numero()}"></span></strong>
+        emitido el <span th:text="${#temporals.format(orden.comprobante().fechaEmision(), 'dd/MM/yyyy HH:mm')}"></span>
+        <a th:href="@{/ordenes/{id}/comprobante/pdf(id=${orden.id()})}" target="_blank" role="button" class="outline">Ver PDF</a>
+    </article>
+
+    <div class="fila" th:if="${activa}" style="margin-bottom: 3rem;">
+        <form th:if="${estado == 'PENDIENTE' and !esRecepcion}" method="post" th:action="@{/ordenes/{id}/iniciar(id=${orden.id()})}">
+            <button type="submit">Iniciar trabajo</button>
+        </form>
+        <form th:if="${estado == 'EN_PROCESO' and !esRecepcion}" method="post" th:action="@{/ordenes/{id}/finalizar(id=${orden.id()})}"
+              onsubmit="return confirm('¿Finalizar la orden y emitir el comprobante?')">
+            <button type="submit">Finalizar y emitir comprobante</button>
+        </form>
+        <form th:unless="${esMecanico}" method="post" th:action="@{/ordenes/{id}/cancelar(id=${orden.id()})}"
+              onsubmit="return confirm('¿Cancelar la orden? Los repuestos asignados regresan al inventario.')" role="group">
+            <input name="motivo" maxlength="255" placeholder="Motivo de cancelación (opcional)" aria-label="Motivo de cancelación">
+            <button type="submit" class="secondary">Cancelar orden</button>
+        </form>
+    </div>
+</main>
+</body>
+</html>

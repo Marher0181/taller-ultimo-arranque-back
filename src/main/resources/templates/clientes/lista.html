@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: head('Clientes')}"></head>
+<body>
+<header th:replace="~{fragmentos :: menu}"></header>
+<main class="container">
+    <div class="fila">
+        <h2>Clientes</h2>
+        <div style="text-align: right;"><a th:href="@{/clientes/nuevo}" role="button">Nuevo cliente</a></div>
+    </div>
+    <form method="get" role="search">
+        <input type="search" name="buscar" th:value="${buscar}" placeholder="Buscar por nombre o documento" aria-label="Buscar">
+        <button type="submit">Buscar</button>
+    </form>
+    <div class="overflow-auto">
+        <table class="striped">
+            <thead><tr><th>Documento</th><th>Nombre</th><th>Teléfono</th><th>Correo</th><th></th></tr></thead>
+            <tbody>
+            <tr th:each="c : ${clientes}">
+                <td th:text="${c.documentoFormateado()}"></td>
+                <td th:text="${c.nombre()}"></td>
+                <td th:text="${c.telefono()}"></td>
+                <td th:text="${c.correo()}"></td>
+                <td>
+                    <a th:href="@{/vehiculos/nuevo(idCliente=${c.id()})}" role="button" class="outline">+ Vehículo</a>
+                    <a th:href="@{/clientes/{id}/editar(id=${c.id()})}" role="button" class="secondary">Editar</a>
+                    <form th:action="@{/clientes/{id}/eliminar(id=${c.id()})}" method="post"
+                          onsubmit="return confirm('¿Eliminar este cliente?')">
+                        <button type="submit" class="secondary outline">Eliminar</button>
+                    </form>
+                </td>
+            </tr>
+            <tr th:if="${clientes.isEmpty()}"><td colspan="5">No hay clientes registrados.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

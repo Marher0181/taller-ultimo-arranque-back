@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: head('Reportes')}"></head>
+<body>
+<header th:replace="~{fragmentos :: menu}"></header>
+<main class="container">
+    <h2>Reportes</h2>
+    <p>Cada reporte se abre como PDF en una pestaña nueva.</p>
+    <div class="grid">
+        <article>
+            <h4>Órdenes por estado</h4>
+            <form th:action="@{/reportes/ordenes-por-estado/pdf}" method="get" target="_blank">
+                <select name="estado" aria-label="Estado">
+                    <option value="">Todos los estados</option>
+                    <option th:each="e : ${estados}" th:value="${e}" th:text="${e.etiqueta}"></option>
+                </select>
+                <button type="submit">Generar PDF</button>
+            </form>
+        </article>
+        <article>
+            <h4>Historial de un vehículo</h4>
+            <form th:action="@{/reportes/historial-vehiculo/pdf}" method="get" target="_blank">
+                <input name="placa" required placeholder="Placa (ej. P123ABC)" aria-label="Placa">
+                <button type="submit">Generar PDF</button>
+            </form>
+        </article>
+    </div>
+    <div class="grid">
+        <article>
+            <h4>Órdenes por mecánico</h4>
+            <form th:action="@{/reportes/ordenes-por-mecanico/pdf}" method="get" target="_blank">
+                <select name="idMecanico" aria-label="Mecánico">
+                    <option value="">Todos los mecánicos</option>
+                    <option th:each="m : ${mecanicos}" th:value="${m.id()}" th:text="${m.codigo()} + ' · ' + ${m.nombre()}"></option>
+                </select>
+                <select name="estado" aria-label="Estado">
+                    <option value="">Todos los estados</option>
+                    <option th:each="e : ${estados}" th:value="${e}" th:text="${e.etiqueta}"></option>
+                </select>
+                <button type="submit">Generar PDF</button>
+            </form>
+        </article>
+        <article>
+            <h4>Ingresos por período</h4>
+            <form th:action="@{/reportes/ingresos/pdf}" method="get" target="_blank">
+                <div class="fila">
+                    <label>Desde <input type="date" name="desde" required th:value="${hoy.withDayOfMonth(1)}"></label>
+                    <label>Hasta <input type="date" name="hasta" required th:value="${hoy}"></label>
+                </div>
+                <button type="submit">Generar PDF</button>
+            </form>
+        </article>
+    </div>
+    <article>
+        <h4>Repuestos con inventario bajo</h4>
+        <a th:href="@{/reportes/repuestos-bajo-inventario/pdf}" target="_blank" role="button">Generar PDF</a>
+    </article>
+</main>
+</body>
+</html>

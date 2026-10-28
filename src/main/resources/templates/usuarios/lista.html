@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: head('Usuarios')}"></head>
+<body>
+<header th:replace="~{fragmentos :: menu}"></header>
+<main class="container">
+    <div class="fila">
+        <h2>Usuarios</h2>
+        <div style="text-align: right;"><a th:href="@{/usuarios/nuevo}" role="button">Nuevo usuario</a></div>
+    </div>
+    <div class="overflow-auto">
+        <table class="striped">
+            <thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Mecánico</th><th>Estado</th><th>Último acceso</th><th></th></tr></thead>
+            <tbody>
+            <tr th:each="u : ${usuarios}">
+                <td th:text="${u.username()}"></td>
+                <td th:text="${u.nombre()}"></td>
+                <td th:text="${u.rol().etiqueta}"></td>
+                <td th:text="${u.mecanico()}"></td>
+                <td th:text="${u.activo()} ? 'Activo' : 'Inactivo'"></td>
+                <td th:text="${u.ultimoAcceso() != null} ? ${#temporals.format(u.ultimoAcceso(), 'dd/MM/yyyy HH:mm')} : '—'"></td>
+                <td>
+                    <a th:href="@{/usuarios/{id}/editar(id=${u.id()})}" role="button" class="secondary">Editar</a>
+                    <form th:if="${u.activo()}" th:action="@{/usuarios/{id}/desactivar(id=${u.id()})}" method="post"
+                          onsubmit="return confirm('¿Desactivar este usuario? Su sesión se cerrará.')">
+                        <button type="submit" class="secondary outline">Desactivar</button>
+                    </form>
+                    <form th:unless="${u.activo()}" th:action="@{/usuarios/{id}/activar(id=${u.id()})}" method="post">
+                        <button type="submit" class="outline">Activar</button>
+                    </form>
+                    <details>
+                        <summary>Restablecer contraseña</summary>
+                        <form th:action="@{/usuarios/{id}/restablecer-password(id=${u.id()})}" method="post" role="group">
+                            <input type="password" name="password" required minlength="8" maxlength="72"
+                                   placeholder="Nueva contraseña" aria-label="Nueva contraseña" autocomplete="new-password">
+                            <button type="submit">Guardar</button>
+                        </form>
+                    </details>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

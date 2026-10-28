@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: head('Iniciar sesión')}"></head>
+<body>
+<main class="container" style="max-width: 26rem; padding-top: 4rem;">
+    <article>
+        <h1>El Último Arranque</h1>
+        <p>Inicie sesión para continuar.</p>
+        <div class="aviso error" th:if="${param.error}" role="alert">Usuario o contraseña incorrectos.</div>
+        <div class="aviso error" th:if="${param.expirada}" role="alert">Su sesión ya no es válida; inicie sesión nuevamente.</div>
+        <div class="aviso exito" th:if="${param.salida}" role="status">Sesión cerrada.</div>
+        <div class="aviso exito" th:if="${param.cambio}" role="status">Contraseña actualizada; inicie sesión con la nueva.</div>
+        <form th:action="@{/login}" method="post">
+            <label>Usuario <input name="username" autocomplete="username" required autofocus></label>
+            <label>Contraseña <input type="password" name="password" autocomplete="current-password" required></label>
+            <button type="submit">Iniciar sesión</button>
+        </form>
+    </article>
+</main>
+</body>
+</html>

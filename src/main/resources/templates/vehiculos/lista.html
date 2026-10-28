@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: head('Vehículos')}"></head>
+<body>
+<header th:replace="~{fragmentos :: menu}"></header>
+<main class="container">
+    <div class="fila">
+        <h2>Vehículos</h2>
+        <div style="text-align: right;"><a th:href="@{/vehiculos/nuevo}" role="button">Nuevo vehículo</a></div>
+    </div>
+    <form method="get" role="search">
+        <input type="search" name="placa" th:value="${placa}" placeholder="Buscar por placa" aria-label="Placa">
+        <button type="submit">Buscar</button>
+    </form>
+    <div class="overflow-auto">
+        <table class="striped">
+            <thead><tr><th>Placa</th><th>Vehículo</th><th>Año</th><th>Color</th><th>Cliente</th><th></th></tr></thead>
+            <tbody>
+            <tr th:each="v : ${vehiculos}">
+                <td th:text="${v.placa()}"></td>
+                <td th:text="${v.marca()} + ' ' + ${v.modelo()}"></td>
+                <td th:text="${v.anio()}"></td>
+                <td th:text="${v.color()}"></td>
+                <td th:text="${v.nombreCliente()}"></td>
+                <td>
+                    <a th:href="@{/ordenes/nueva(idVehiculo=${v.id()})}" role="button" class="outline">+ Orden</a>
+                    <a th:href="@{/reportes/historial-vehiculo/pdf(placa=${v.placa()})}" target="_blank"
+                       role="button" class="outline">Historial</a>
+                    <a th:href="@{/vehiculos/{id}/editar(id=${v.id()})}" role="button" class="secondary">Editar</a>
+                    <form th:action="@{/vehiculos/{id}/eliminar(id=${v.id()})}" method="post"
+                          onsubmit="return confirm('¿Eliminar este vehículo?')">
+                        <button type="submit" class="secondary outline">Eliminar</button>
+                    </form>
+                </td>
+            </tr>
+            <tr th:if="${vehiculos.isEmpty()}"><td colspan="6">No hay vehículos registrados.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

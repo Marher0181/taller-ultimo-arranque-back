@@ -6,6 +6,7 @@ import gt.umg.ultimoarranque.modelo.Rol;
 import gt.umg.ultimoarranque.servicio.AutenticacionService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -22,6 +23,7 @@ import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -33,14 +35,17 @@ public class ConfiguracionSeguridad {
 
     private static final String ALGORITMO_CLAVE = "HmacSHA256";
     private static final String[] RUTAS_PUBLICAS = {"/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/error"};
+    private static final String[] RUTAS_API = {"/api/**", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**"};
     private static final String ADMIN = Rol.ADMIN.name();
     private static final String RECEPCION = Rol.RECEPCION.name();
     private static final String MECANICO = Rol.MECANICO.name();
 
     @Bean
+    @Order(1)
     public SecurityFilterChain cadenaSeguridad(HttpSecurity http, AutenticacionService autenticacionService,
                                                RespuestaErrorSeguridad respuestaError) throws Exception {
-        http.csrf(AbstractHttpConfigurer::disable)
+        http.securityMatcher(RUTAS_API)
+                .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -53,6 +58,19 @@ public class ConfiguracionSeguridad {
                 .exceptionHandling(excepciones -> excepciones
                         .authenticationEntryPoint(respuestaError)
                         .accessDeniedHandler(respuestaError));
+        return http.build();
+    }
+
+    /** Interfaz web (Thymeleaf): sesión con formulario de login y CSRF activo. */
+    @Bean
+    @Order(2)
+    public SecurityFilterChain cadenaSeguridadWeb(HttpSecurity http, ProveedorAutenticacionWeb proveedor,
+                                                  AutenticacionService autenticacionService) throws Exception {
+        http.authenticationProvider(proveedor)
+                .authorizeHttpRequests(this::reglasDeAccesoWeb)
+                .formLogin(login -> login.loginPage("/login").defaultSuccessUrl("/", true).permitAll())
+                .logout(salida -> salida.logoutSuccessUrl("/login?salida"))
+                .addFilterBefore(new FiltroSesionWeb(autenticacionService), AuthorizationFilter.class);
         return http.build();
     }
 
@@ -88,6 +106,21 @@ public class ConfiguracionSeguridad {
                 .hasAnyRole(ADMIN, MECANICO)
                 .requestMatchers("/api/**").hasAnyRole(ADMIN, RECEPCION)
                 .anyRequest().denyAll();
+    }
+
+    private void reglasDeAccesoWeb(
+            AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry reglas) {
+        reglas.requestMatchers("/error").permitAll()
+                .requestMatchers("/usuarios/**", "/bitacora/**").hasRole(ADMIN)
+                .requestMatchers("/ordenes/nueva").hasAnyRole(ADMIN, RECEPCION)
+                .requestMatchers("/perfil/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/", "/ordenes", "/ordenes/*", "/ordenes/*/comprobante/pdf",
+                        "/repuestos", "/servicios")
+                .hasAnyRole(ADMIN, RECEPCION, MECANICO)
+                .requestMatchers("/ordenes/*/servicios/**").hasAnyRole(ADMIN, RECEPCION, MECANICO)
+                .requestMatchers("/ordenes/*/iniciar", "/ordenes/*/repuestos/**", "/ordenes/*/finalizar")
+                .hasAnyRole(ADMIN, MECANICO)
+                .anyRequest().hasAnyRole(ADMIN, RECEPCION);
     }
 
     private static SecretKey claveSecreta(TallerProperties propiedades) {

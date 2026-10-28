@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: head(${form == null} ? 'Nuevo mecánico' : 'Editar mecánico')}"></head>
+<body>
+<header th:replace="~{fragmentos :: menu}"></header>
+<main class="container">
+    <h2 th:text="${form == null} ? 'Nuevo mecánico' : 'Editar mecánico'"></h2>
+    <form method="post" th:action="${form == null} ? @{/mecanicos} : @{/mecanicos/{id}(id=${form.id()})}">
+        <div class="fila">
+            <label>Código <input name="codigo" th:value="${form?.codigo()}" required maxlength="20"></label>
+            <label>Nombre <input name="nombre" th:value="${form?.nombre()}" required maxlength="120"></label>
+        </div>
+        <div class="fila">
+            <label>Especialidad <input name="especialidad" th:value="${form?.especialidad()}" maxlength="80"></label>
+            <label>Teléfono <input name="telefono" th:value="${form?.telefono()}" maxlength="20"></label>
+        </div>
+        <button type="submit">Guardar</button>
+        <a th:href="@{/mecanicos}">Cancelar</a>
+    </form>
+</main>
+</body>
+</html>

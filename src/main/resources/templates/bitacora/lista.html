@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: head('Bitácora')}"></head>
+<body>
+<header th:replace="~{fragmentos :: menu}"></header>
+<main class="container">
+    <h2>Bitácora</h2>
+    <form method="get" class="fila">
+        <label>Acción
+            <select name="accion">
+                <option value="">Todas</option>
+                <option th:each="a : ${acciones}" th:value="${a}" th:text="${a}" th:selected="${a == filtro.accion()}"></option>
+            </select>
+        </label>
+        <label>Entidad
+            <select name="entidad">
+                <option value="">Todas</option>
+                <option th:each="e : ${entidades}" th:value="${e}" th:text="${e}" th:selected="${e == filtro.entidad()}"></option>
+            </select>
+        </label>
+        <label>Desde <input type="date" name="desde" th:value="${filtro.desde()}"></label>
+        <label>Hasta <input type="date" name="hasta" th:value="${filtro.hasta()}"></label>
+        <button type="submit">Filtrar</button>
+    </form>
+    <p><small th:text="'Se muestran como máximo ' + ${filtro.limite()} + ' registros, del más reciente al más antiguo.'"></small></p>
+    <div class="overflow-auto">
+        <table class="striped">
+            <thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Entidad</th><th>Detalle</th><th>IP</th></tr></thead>
+            <tbody>
+            <tr th:each="b : ${entradas}">
+                <td th:text="${#temporals.format(b.fecha(), 'dd/MM/yyyy HH:mm:ss')}"></td>
+                <td th:text="${b.usuario()}"></td>
+                <td th:text="${b.accion()}"></td>
+                <td th:text="${b.entidad()} + (${b.idEntidad() != null} ? ' #' + ${b.idEntidad()} : '')"></td>
+                <td th:text="${b.detalle()}"></td>
+                <td th:text="${b.direccionIp()}"></td>
+            </tr>
+            <tr th:if="${entradas.isEmpty()}"><td colspan="6">No hay registros con esos filtros.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

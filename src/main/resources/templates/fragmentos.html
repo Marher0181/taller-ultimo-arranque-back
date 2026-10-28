@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(titulo)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${titulo} + ' · El Último Arranque'">El Último Arranque</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.0.6/css/pico.min.css">
+    <style>
+        nav ul { flex-wrap: wrap; }
+        nav form, td form { display: inline; margin: 0; }
+        td form button, td a[role=button] { padding: .25rem .6rem; font-size: .85rem; margin: 0 .2rem .2rem 0; width: auto; }
+        .aviso { padding: .75rem 1rem; border-radius: .4rem; margin-bottom: 1rem; }
+        .exito { background: #d1f2d9; color: #135c27; }
+        .error { background: #fbd9d6; color: #8a1c13; }
+        .estado { font-weight: 600; font-size: .85rem; }
+        .fila { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; }
+        .fila > * { flex: 1 1 12rem; }
+        .numero { text-align: right; white-space: nowrap; }
+        table { font-size: .92rem; }
+    </style>
+</head>
+<body>
+<header th:fragment="menu" class="container">
+    <nav th:with="rol=${sesionActual.rol().name()}">
+        <ul><li><a th:href="@{/}"><strong>El Último Arranque</strong></a></li></ul>
+        <ul>
+            <li><a th:href="@{/ordenes}">Órdenes</a></li>
+            <th:block th:if="${rol != 'MECANICO'}">
+                <li><a th:href="@{/clientes}">Clientes</a></li>
+                <li><a th:href="@{/vehiculos}">Vehículos</a></li>
+                <li><a th:href="@{/mecanicos}">Mecánicos</a></li>
+            </th:block>
+            <li><a th:href="@{/repuestos}">Repuestos</a></li>
+            <li><a th:href="@{/servicios}">Servicios</a></li>
+            <li th:if="${rol != 'MECANICO'}"><a th:href="@{/reportes}">Reportes</a></li>
+            <th:block th:if="${rol == 'ADMIN'}">
+                <li><a th:href="@{/usuarios}">Usuarios</a></li>
+                <li><a th:href="@{/bitacora}">Bitácora</a></li>
+            </th:block>
+            <li><a th:href="@{/perfil}" th:text="${sesionActual.username()}">usuario</a></li>
+            <li>
+                <form th:action="@{/logout}" method="post">
+                    <button class="secondary outline" type="submit">Salir</button>
+                </form>
+            </li>
+        </ul>
+    </nav>
+    <div class="aviso exito" th:if="${mensajeExito}" th:text="${mensajeExito}" role="status"></div>
+    <div class="aviso error" th:if="${mensajeError}" th:text="${mensajeError}" role="alert"></div>
+</header>
+</body>
+</html>

@@ -28,7 +28,8 @@ Dependencias principales: Spring Boot 3.5.16 (Web, JDBC, Validation, Security, O
    ```bash
    mvn spring-boot:run
    ```
-4. Documentación interactiva: <http://localhost:8080/swagger-ui.html>. Inicie sesión con `POST /api/auth/login`, copie el `token` y péguelo en el botón **Authorize**.
+4. Interfaz web: <http://localhost:8080> (inicie sesión con cualquiera de los usuarios de prueba).
+5. Documentación interactiva de la API: <http://localhost:8080/swagger-ui.html>. Inicie sesión con `POST /api/auth/login`, copie el `token` y péguelo en el botón **Authorize**.
 
 Para pruebas unitarias: `mvn test`.
 
@@ -84,6 +85,8 @@ Prueba local de la imagen: `docker build -t taller . && docker run -p 8080:8080 
 3. Además, en cada solicitud se consulta el usuario en la BD: si fue **desactivado**, cambió su **contraseña** o su **rol**, el token anterior deja de ser válido de inmediato (campo `version_token`).
 4. Al vencer el token se debe iniciar sesión otra vez (no hay renovación automática).
 
+La **interfaz web** (Thymeleaf) usa sesión con formulario de login y protección CSRF en lugar de JWT. Aplica los mismos permisos por rol y también revisa `version_token` en cada solicitud, así que desactivar al usuario o cambiar su contraseña o rol cierra su sesión web.
+
 ### Permisos por rol
 
 | Operación | ADMIN | RECEPCION | MECANICO |
@@ -112,9 +115,11 @@ Reglas adicionales: un usuario MECANICO siempre está vinculado a un registro de
 ```
 gt.umg.ultimoarranque
 ├── controlador     Controlador: endpoints REST, manejo global de errores
+│   └── web         Controlador: páginas web (Thymeleaf) sobre los mismos servicios
 ├── seguridad       Spring Security, emisión/validación de JWT, usuario autenticado
 ├── vista
 │   └── pdf         Vista: documentos PDF (comprobante y reportes)
+│                   Vista web: plantillas Thymeleaf en src/main/resources/templates
 ├── dto             Vista: contratos JSON de entrada y salida (records)
 ├── servicio        Modelo: lógica de negocio y control transaccional
 ├── dao             Modelo: acceso a datos con JDBC y PreparedStatement
