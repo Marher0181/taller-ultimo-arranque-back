@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: pagina('Clientes', 'clientes', ~{::contenido})}">
+<body>
+<th:block th:fragment="contenido">
+    <div class="title-row">
+        <div>
+            <h1>Clientes</h1>
+            <p class="sub">Propietarios de los vehículos que atiende el taller, identificados por NIT o DPI.</p>
+        </div>
+        <div class="acciones"><button type="button" class="btn primary grande" data-abrir="dlg-cliente">Nuevo cliente</button></div>
+    </div>
+
+    <div class="barra-herramientas">
+        <label class="oculto" for="buscar-clientes">Buscar clientes</label>
+        <input id="buscar-clientes" class="input" type="search" placeholder="Nombre, NIT o DPI" data-filtrar="tabla-clientes">
+        <span class="total num" data-total-de="tabla-clientes" data-singular="cliente" data-plural="clientes"
+              th:text="|${clientes.size()} ${clientes.size() == 1 ? 'cliente' : 'clientes'}|"></span>
+    </div>
+
+    <section class="panel">
+        <div class="table-wrap">
+            <table class="tabla-movil" id="tabla-clientes">
+                <thead><tr><th>Cliente</th><th>Teléfono</th><th>Correo</th><th class="n">Registrado</th><th><span class="oculto">Acciones</span></th></tr></thead>
+                <tbody>
+                <tr class="vacio-fila" data-vacio-filtro hidden><td colspan="5">Ningún cliente coincide con la búsqueda.</td></tr>
+                <tr th:each="c : ${clientes}" th:data-buscar="${vista.buscable(c.nombre(), c.numeroDocumento(), c.documentoFormateado())}">
+                    <td><span class="identidad" th:text="${c.nombre()}"></span><span class="sub num" th:text="|${c.tipoDocumento()} ${c.documentoFormateado()}|"></span></td>
+                    <td class="secundario num" th:text="${c.telefono() ?: '—'}"></td>
+                    <td class="ocultar-movil" th:text="${c.correo() ?: '—'}"></td>
+                    <td class="n num ocultar-movil" th:text="${vista.fecha(c.fechaRegistro())}"></td>
+                    <td class="acciones-fila">
+                        <button type="button" class="btn texto" data-abrir="dlg-cliente" data-modo="editar" data-titulo="Editar cliente"
+                                th:data-accion="@{/clientes/{id}(id=${c.id()})}" th:data-valores="${vista.json(c)}">Editar</button>
+                        &nbsp;&nbsp;
+                        <button type="button" class="btn texto peligro" data-abrir="dlg-eliminar-cliente"
+                                th:data-accion="@{/clientes/{id}/eliminar(id=${c.id()})}" th:data-valores="${vista.json(c)}">Eliminar</button>
+                    </td>
+                </tr>
+                <tr class="vacio-fila" th:if="${clientes.isEmpty()}"><td colspan="5">Aún no hay clientes. Registre el primero con Nuevo cliente.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <dialog id="dlg-cliente" class="dialogo" aria-labelledby="dlg-cliente-titulo">
+        <header th:replace="~{layout :: cabezaDialogo('dlg-cliente', 'Nuevo cliente')}"></header>
+        <div class="dialogo-cuerpo">
+            <div class="alerta" role="alert" data-error-de="form-cliente" hidden></div>
+            <form id="form-cliente" class="formulario" th:action="@{/clientes}" method="post" novalidate>
+                <input type="hidden" name="_formulario" value="form-cliente"><input type="hidden" name="_modo"><input type="hidden" name="_titulo">
+                <div class="field">
+                    <label for="cl-tipo">Tipo de documento</label>
+                    <select id="cl-tipo" class="input" name="tipoDocumento"><option value="NIT">NIT</option><option value="DPI">DPI</option></select>
+                </div>
+                <div class="field">
+                    <label for="cl-numero">Número</label>
+                    <input id="cl-numero" class="input num" name="numeroDocumento" aria-describedby="cl-numero-ayuda" autocomplete="off" required maxlength="20"
+                           data-normalizar="sin-guiones" data-validar="documento" data-tipo-desde="tipoDocumento">
+                    <span class="hint" id="cl-numero-ayuda">Se valida el dígito verificador.</span>
+                </div>
+                <div class="field completo">
+                    <label for="cl-nombre">Nombre o razón social</label>
+                    <input id="cl-nombre" class="input" name="nombre" autocomplete="off" required maxlength="120">
+                </div>
+                <div class="field">
+                    <label for="cl-telefono">Teléfono</label>
+                    <input id="cl-telefono" class="input num" name="telefono" inputmode="tel" autocomplete="off" maxlength="20">
+                </div>
+                <div class="field">
+                    <label for="cl-correo">Correo</label>
+                    <input id="cl-correo" class="input" type="email" name="correo" autocomplete="off" maxlength="120">
+                </div>
+                <div class="field completo">
+                    <label for="cl-direccion">Dirección</label>
+                    <input id="cl-direccion" class="input" name="direccion" autocomplete="off" maxlength="200">
+                </div>
+            </form>
+        </div>
+        <footer class="dialogo-pie">
+            <button type="button" class="btn" data-cerrar>Cancelar</button>
+            <button type="submit" form="form-cliente" class="btn primary" data-texto-nuevo="Registrar cliente" data-texto-editar="Guardar cambios">Registrar cliente</button>
+        </footer>
+    </dialog>
+
+    <dialog id="dlg-eliminar-cliente" class="dialogo" aria-labelledby="dlg-eliminar-cliente-titulo">
+        <header th:replace="~{layout :: cabezaDialogo('dlg-eliminar-cliente', 'Eliminar cliente')}"></header>
+        <div class="dialogo-cuerpo">
+            <div class="alerta" role="alert" data-error-de="form-eliminar-cliente" hidden></div>
+            <form id="form-eliminar-cliente" th:action="@{/clientes}" method="post"><input type="hidden" name="_formulario" value="form-eliminar-cliente"></form>
+            <p>¿Eliminar a <b data-texto="nombre"></b>? Esta acción no se puede deshacer. Un cliente con vehículos registrados no se puede eliminar.</p>
+        </div>
+        <footer class="dialogo-pie">
+            <button type="button" class="btn" data-cerrar>Volver</button>
+            <button type="submit" form="form-eliminar-cliente" class="btn peligro lleno">Eliminar cliente</button>
+        </footer>
+    </dialog>
+</th:block>
+</body>
+</html>

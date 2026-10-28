@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: pagina('Órdenes', 'ordenes', ~{::contenido})}">
+<body>
+<th:block th:fragment="contenido">
+    <div class="title-row">
+        <div>
+            <h1>Órdenes de trabajo</h1>
+            <p class="sub" th:text="${sesionActual.esMecanico()} ? 'Solo se muestran las órdenes asignadas a usted.' : 'Cada vehículo desde su recepción hasta el comprobante.'"></p>
+        </div>
+        <div class="acciones" th:if="${vista.puede(sesionActual, 'ordenes.crear')}">
+            <button type="button" class="btn primary grande" data-abrir="dlg-nueva-orden">Nueva orden</button>
+        </div>
+    </div>
+
+    <form class="tabs" role="tablist" aria-label="Filtrar por estado" th:action="@{/ordenes}" method="get">
+        <button type="submit" role="tab" name="estado" value="" th:aria-selected="${estado == null}">Todas<span class="num" th:text="${total}"></span></button>
+        <button th:each="e : ${estados}" type="submit" role="tab" name="estado" th:value="${e}" th:aria-selected="${estado == e}">[[${e.etiqueta}]]<span class="num" th:text="${conteo.get(e)}"></span></button>
+    </form>
+
+    <div class="barra-herramientas">
+        <label class="oculto" for="buscar-ordenes">Buscar órdenes</label>
+        <input id="buscar-ordenes" class="input" type="search" placeholder="Placa, cliente, vehículo u orden" data-filtrar="tabla-ordenes" th:value="${buscar}">
+        <span class="total num" data-total-de="tabla-ordenes" data-singular="orden" data-plural="órdenes"
+              th:text="|${ordenes.size()} ${ordenes.size() == 1 ? 'orden' : 'órdenes'}|"></span>
+    </div>
+
+    <section class="panel">
+        <div class="table-wrap">
+            <table class="tabla-movil" id="tabla-ordenes">
+                <thead>
+                <tr><th>Orden</th><th>Placa</th><th>Vehículo y cliente</th><th>Mecánico</th><th>Estado</th><th class="n">Recepción</th><th class="n">Total</th></tr>
+                </thead>
+                <tbody>
+                <tr class="vacio-fila" data-vacio-filtro hidden><td colspan="7">No hay órdenes que coincidan con la búsqueda o el estado elegido.</td></tr>
+                <tr th:each="o : ${ordenes}" class="enlace" th:data-href="@{/ordenes/{id}(id=${o.id()})}"
+                    th:data-buscar="${vista.buscable(o.placa(), o.cliente(), vista.orden(o.id()), o.vehiculo())}">
+                    <td><a class="identidad" th:href="@{/ordenes/{id}(id=${o.id()})}" th:text="${vista.orden(o.id())}"></a></td>
+                    <td><span th:replace="~{layout :: placa(${o.placa()}, false)}"></span></td>
+                    <td class="secundario">[[${o.vehiculo()}]]<span class="sub" th:text="${o.cliente()}"></span></td>
+                    <td class="ocultar-movil" th:text="${o.mecanico()}"></td>
+                    <td><span th:replace="~{layout :: estado(${o.estado()})}"></span></td>
+                    <td class="n num ocultar-movil" th:text="${vista.fecha(o.fechaCreacion())}"></td>
+                    <td class="n num" th:text="${vista.moneda(o.total())}"></td>
+                </tr>
+                <tr class="vacio-fila" th:if="${ordenes.isEmpty()}"><td colspan="7">No hay órdenes que coincidan con la búsqueda o el estado elegido.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <th:block th:if="${vista.puede(sesionActual, 'ordenes.crear')}"><dialog th:replace="~{layout :: nuevaOrden}"></dialog></th:block>
+</th:block>
+</body>
+</html>

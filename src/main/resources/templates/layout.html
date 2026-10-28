@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<!-- Estructura común (shell del front Angular): barra lateral, barra superior, menú de cuenta y avisos. -->
+<html lang="es-GT" xmlns:th="http://www.thymeleaf.org" th:fragment="pagina(titulo, activo, contenido)">
+<head th:replace="~{layout :: cabeza(${titulo})}"></head>
+<body>
+<div class="app" th:with="usuario=${sesionActual}">
+    <aside class="sidebar" aria-label="Navegación principal">
+        <a class="marca" th:href="@{/}">
+            <app-marca th:insert="~{layout :: marca}"></app-marca>
+            <span><b>El Último Arranque</b><small>Taller mecánico</small></span>
+        </a>
+        <nav class="nav">
+            <div class="nav-grupo">Taller</div>
+            <a th:replace="~{layout :: navItem('/', 'Taller hoy', 'inicio', 'inicio')}"></a>
+            <a th:replace="~{layout :: navItem('/ordenes', 'Órdenes de trabajo', 'ordenes', 'ordenes')}"></a>
+
+            <div class="nav-grupo">Catálogos</div>
+            <th:block th:if="${vista.puede(usuario, 'clientes')}"><a th:replace="~{layout :: navItem('/clientes', 'Clientes', 'clientes', 'clientes')}"></a></th:block>
+            <th:block th:if="${vista.puede(usuario, 'vehiculos')}"><a th:replace="~{layout :: navItem('/vehiculos', 'Vehículos', 'vehiculos', 'vehiculos')}"></a></th:block>
+            <th:block th:if="${vista.puede(usuario, 'mecanicos')}"><a th:replace="~{layout :: navItem('/mecanicos', 'Mecánicos', 'mecanicos', 'mecanicos')}"></a></th:block>
+            <a th:replace="~{layout :: navItem('/repuestos', 'Repuestos', 'repuestos', 'repuestos')}"></a>
+            <a th:replace="~{layout :: navItem('/servicios', 'Servicios', 'servicios', 'servicios')}"></a>
+
+            <th:block th:if="${vista.puede(usuario, 'reportes')}">
+                <div class="nav-grupo">Análisis</div>
+                <a th:replace="~{layout :: navItem('/reportes', 'Reportes', 'reportes', 'reportes')}"></a>
+            </th:block>
+
+            <th:block th:if="${vista.puede(usuario, 'usuarios')}">
+                <div class="nav-grupo">Administración</div>
+                <a th:replace="~{layout :: navItem('/usuarios', 'Usuarios', 'usuarios', 'usuarios')}"></a>
+                <a th:replace="~{layout :: navItem('/bitacora', 'Bitácora', 'bitacora', 'bitacora')}"></a>
+            </th:block>
+        </nav>
+        <div class="pie">
+            <a th:replace="~{layout :: navItem('/perfil', 'Mi perfil', 'perfil', 'perfil')}"></a>
+        </div>
+    </aside>
+
+    <div class="area">
+        <header class="topbar">
+            <button type="button" class="btn ghost icono-solo menu-toggle" aria-expanded="false" aria-label="Abrir menú">
+                <app-icono data-icono-menu th:insert="~{layout :: icono('menu')}"></app-icono>
+                <app-icono data-icono-cerrar hidden th:insert="~{layout :: icono('cerrar')}"></app-icono>
+            </button>
+            <a class="marca-movil" th:href="@{/}"><app-marca th:insert="~{layout :: marca}"></app-marca>El Último Arranque</a>
+            <form class="buscador" role="search" th:action="@{/buscar}" method="get">
+                <app-icono th:insert="~{layout :: icono('buscar')}"></app-icono>
+                <label class="oculto" for="buscar-global">Buscar por placa u orden</label>
+                <input id="buscar-global" class="input" name="busqueda" placeholder="Buscar por placa, cliente u orden (OT-0013)" autocomplete="off">
+            </form>
+            <span class="espacio"></span>
+            <div class="cuenta">
+                <button type="button" class="cuenta-boton" aria-expanded="false" aria-haspopup="menu">
+                    <span class="inicial" aria-hidden="true" th:text="${#strings.toUpperCase(#strings.substring(usuario.nombre(), 0, 1))}">A</span>
+                    <span><b th:text="${usuario.nombre()}">Nombre</b><small th:text="${usuario.rol().etiqueta}">Rol</small></span>
+                    <app-icono th:insert="~{layout :: icono('abajo')}"></app-icono>
+                </button>
+                <div class="menu-cuenta" role="menu">
+                    <p>Sesión activa hasta las <span th:text="${vista.hora(sesionExpira)}"></span></p>
+                    <a th:href="@{/perfil}" role="menuitem"><app-icono th:insert="~{layout :: icono('perfil')}"></app-icono>Mi perfil y contraseña</a>
+                    <form th:action="@{/logout}" method="post">
+                        <button type="submit" role="menuitem"><app-icono th:insert="~{layout :: icono('salir')}"></app-icono>Cerrar sesión</button>
+                    </form>
+                </div>
+            </div>
+        </header>
+        <main class="canvas" id="contenido">
+            <th:block th:replace="${contenido}"></th:block>
+        </main>
+    </div>
+</div>
+<th:block th:replace="~{layout :: avisos}"></th:block>
+</body>
+</html>
+
+<!-- ===================== Fragmentos ===================== -->
+
+<head th:fragment="cabeza(titulo)">
+    <meta charset="utf-8">
+    <title th:text="${titulo} + ' | El Último Arranque'">El Último Arranque</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/x-icon" th:href="@{/favicon.ico}">
+    <link rel="preload" th:href="@{/fuentes/barlow-latin-400-normal.woff2}" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" th:href="@{/css/taller.css}">
+</head>
+
+<th:block th:fragment="avisos">
+    <div class="avisos" aria-live="polite">
+        <div th:if="${aviso}" th:class="'aviso ' + ${aviso.tipo()}" role="status">
+            <div><b th:text="${aviso.titulo()}"></b><span th:if="${aviso.detalle()}" th:text="${aviso.detalle()}"></span></div>
+            <button type="button" class="aviso-cerrar" aria-label="Cerrar aviso">×</button>
+        </div>
+    </div>
+    <script th:if="${reabrir}" th:inline="javascript">window.TALLER_REABRIR = /*[[${reabrir}]]*/ null;</script>
+    <script th:src="@{/js/taller.js}"></script>
+</th:block>
+
+<a th:fragment="navItem(ruta, texto, icono, clave)" class="nav-item" th:href="@{${ruta}}"
+   th:classappend="${activo == clave} ? 'activo'" th:aria-current="${activo == clave ? 'page' : null}">
+    <app-icono th:insert="~{layout :: icono(${icono})}"></app-icono>[[${texto}]]
+</a>
+
+<svg th:fragment="icono(nombre)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path th:d="${vista.icono(nombre)}"/></svg>
+
+<svg th:fragment="marca" viewBox="0 0 34 24" aria-hidden="true">
+    <rect x="0.75" y="0.75" width="32.5" height="22.5" rx="3" fill="#ffffff" stroke="#1b2230" stroke-width="1.5"/>
+    <path d="M1.5 4.25a2.5 2.5 0 0 1 2.5-2.5h26a2.5 2.5 0 0 1 2.5 2.5V6.5h-31z" fill="var(--accent)"/>
+    <text x="17" y="19" text-anchor="middle" font-size="11" font-weight="700" fill="#141a24" font-family="Barlow, sans-serif" letter-spacing="0.5">ÚA</text>
+</svg>
+
+<!-- app-placa -->
+<span th:fragment="placa(placa, grande)" class="placa" th:classappend="${grande} ? 'grande'" role="img" th:aria-label="'Placa ' + ${placa}"><span class="placa-banda" aria-hidden="true"></span><b th:text="${placa}"></b></span>
+
+<!-- app-estado -->
+<span th:fragment="estado(valor)" th:class="${vista.pill(valor)}" th:text="${vista.etiqueta(valor)}"></span>
+
+<!-- Cabecera de app-dialogo: título y botón cerrar -->
+<header th:fragment="cabezaDialogo(id, titulo)" class="dialogo-cabeza">
+    <h2 th:id="${id} + '-titulo'" th:text="${titulo}"></h2>
+    <button type="button" class="btn ghost icono-solo" aria-label="Cerrar" data-cerrar><app-icono th:insert="~{layout :: icono('cerrar')}"></app-icono></button>
+</header>
+
+<!-- app-nueva-orden: diálogo para registrar una orden (Taller hoy y Órdenes) -->
+<dialog th:fragment="nuevaOrden" id="dlg-nueva-orden" class="dialogo" aria-labelledby="dlg-nueva-orden-titulo">
+    <header th:replace="~{layout :: cabezaDialogo('dlg-nueva-orden', 'Nueva orden de trabajo')}"></header>
+    <div class="dialogo-cuerpo">
+        <div class="alerta" role="alert" data-error-de="form-nueva-orden" hidden></div>
+        <form id="form-nueva-orden" class="formulario" th:action="@{/ordenes}" method="post" novalidate>
+            <input type="hidden" name="_formulario" value="form-nueva-orden">
+            <div class="field completo">
+                <label for="no-vehiculo">Vehículo</label>
+                <select id="no-vehiculo" class="input" name="idVehiculo" required>
+                    <option value="">Seleccione la placa</option>
+                    <option th:each="v : ${noVehiculos}" th:value="${v.id()}"
+                            th:text="|${v.placa()}, ${v.marca()} ${v.modelo()} ${v.anio()} (${v.nombreCliente()})|"></option>
+                </select>
+            </div>
+            <div class="field completo">
+                <label for="no-mecanico">Mecánico asignado</label>
+                <select id="no-mecanico" class="input" name="idMecanico" required>
+                    <option value="">Seleccione el mecánico</option>
+                    <option th:each="m : ${noMecanicos}" th:value="${m.id()}"
+                            th:text="|${m.codigo()} ${m.nombre()}${m.especialidad() != null ? ', ' + m.especialidad() : ''}|"></option>
+                </select>
+            </div>
+            <div class="field completo">
+                <label for="no-problema">Problema reportado por el cliente</label>
+                <textarea id="no-problema" class="input" name="descripcionProblema" maxlength="500" required></textarea>
+            </div>
+            <fieldset class="field completo" style="border: 0; padding: 0; margin: 0">
+                <legend style="font-weight: 500; margin-bottom: 8px">Servicios desde la recepción (opcional)</legend>
+                <div class="opciones">
+                    <label class="opcion" th:each="s : ${noServicios}">
+                        <input type="checkbox" name="serviciosIds" th:value="${s.id()}">
+                        [[${s.descripcion()}]]<span class="num" th:text="${vista.moneda(s.costoManoObra())}"></span>
+                    </label>
+                </div>
+            </fieldset>
+        </form>
+    </div>
+    <footer class="dialogo-pie">
+        <button type="button" class="btn" data-cerrar>Cancelar</button>
+        <button type="submit" form="form-nueva-orden" class="btn primary">Crear orden</button>
+    </footer>
+</dialog>

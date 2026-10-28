@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: pagina('Mecánicos', 'mecanicos', ~{::contenido})}">
+<body>
+<th:block th:fragment="contenido">
+    <div class="title-row">
+        <div>
+            <h1>Mecánicos</h1>
+            <p class="sub">Un mecánico puede atender varias órdenes a la vez; no se elimina si tiene órdenes o un usuario vinculado.</p>
+        </div>
+        <div class="acciones"><button type="button" class="btn primary grande" data-abrir="dlg-mecanico">Nuevo mecánico</button></div>
+    </div>
+
+    <section class="panel">
+        <div class="table-wrap">
+            <table class="tabla-movil">
+                <thead><tr><th>Código</th><th>Mecánico</th><th>Teléfono</th><th><span class="oculto">Acciones</span></th></tr></thead>
+                <tbody>
+                <tr th:each="m : ${mecanicos}">
+                    <td class="tenue" th:text="${m.codigo()}"></td>
+                    <td><span class="identidad" th:text="${m.nombre()}"></span><span class="sub" th:text="${m.especialidad() ?: 'Sin especialidad registrada'}"></span></td>
+                    <td class="secundario num" th:text="${m.telefono() ?: '—'}"></td>
+                    <td class="acciones-fila">
+                        <button type="button" class="btn texto" data-abrir="dlg-mecanico" data-modo="editar" data-titulo="Editar mecánico"
+                                th:data-accion="@{/mecanicos/{id}(id=${m.id()})}" th:data-valores="${vista.json(m)}">Editar</button>
+                        &nbsp;&nbsp;
+                        <button type="button" class="btn texto peligro" data-abrir="dlg-eliminar-mecanico"
+                                th:data-accion="@{/mecanicos/{id}/eliminar(id=${m.id()})}" th:data-valores="${vista.json(m)}">Eliminar</button>
+                    </td>
+                </tr>
+                <tr class="vacio-fila" th:if="${mecanicos.isEmpty()}"><td colspan="4">Aún no hay mecánicos registrados.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <dialog id="dlg-mecanico" class="dialogo" aria-labelledby="dlg-mecanico-titulo">
+        <header th:replace="~{layout :: cabezaDialogo('dlg-mecanico', 'Nuevo mecánico')}"></header>
+        <div class="dialogo-cuerpo">
+            <div class="alerta" role="alert" data-error-de="form-mecanico" hidden></div>
+            <form id="form-mecanico" class="formulario" th:action="@{/mecanicos}" method="post" novalidate>
+                <input type="hidden" name="_formulario" value="form-mecanico"><input type="hidden" name="_modo"><input type="hidden" name="_titulo">
+                <div class="field">
+                    <label for="me-codigo">Código</label>
+                    <input id="me-codigo" class="input" name="codigo" aria-describedby="me-codigo-ayuda" autocomplete="off" style="text-transform: uppercase"
+                           required maxlength="20" data-normalizar="mayusculas">
+                    <span class="hint" id="me-codigo-ayuda">Ejemplo: MEC-006</span>
+                </div>
+                <div class="field">
+                    <label for="me-telefono">Teléfono</label>
+                    <input id="me-telefono" class="input num" name="telefono" inputmode="tel" autocomplete="off" maxlength="20">
+                </div>
+                <div class="field completo">
+                    <label for="me-nombre">Nombre completo</label>
+                    <input id="me-nombre" class="input" name="nombre" autocomplete="off" required maxlength="120">
+                </div>
+                <div class="field completo">
+                    <label for="me-especialidad">Especialidad</label>
+                    <input id="me-especialidad" class="input" name="especialidad" autocomplete="off" maxlength="80">
+                </div>
+            </form>
+        </div>
+        <footer class="dialogo-pie">
+            <button type="button" class="btn" data-cerrar>Cancelar</button>
+            <button type="submit" form="form-mecanico" class="btn primary" data-texto-nuevo="Registrar mecánico" data-texto-editar="Guardar cambios">Registrar mecánico</button>
+        </footer>
+    </dialog>
+
+    <dialog id="dlg-eliminar-mecanico" class="dialogo" aria-labelledby="dlg-eliminar-mecanico-titulo">
+        <header th:replace="~{layout :: cabezaDialogo('dlg-eliminar-mecanico', 'Eliminar mecánico')}"></header>
+        <div class="dialogo-cuerpo">
+            <div class="alerta" role="alert" data-error-de="form-eliminar-mecanico" hidden></div>
+            <form id="form-eliminar-mecanico" th:action="@{/mecanicos}" method="post"><input type="hidden" name="_formulario" value="form-eliminar-mecanico"></form>
+            <p>¿Eliminar a <b data-texto="nombre"></b>? No es posible si tiene órdenes asociadas o un usuario vinculado.</p>
+        </div>
+        <footer class="dialogo-pie">
+            <button type="button" class="btn" data-cerrar>Volver</button>
+            <button type="submit" form="form-eliminar-mecanico" class="btn peligro lleno">Eliminar mecánico</button>
+        </footer>
+    </dialog>
+</th:block>
+</body>
+</html>

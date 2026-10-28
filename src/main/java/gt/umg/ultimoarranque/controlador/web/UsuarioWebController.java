@@ -6,6 +6,7 @@ import gt.umg.ultimoarranque.dto.UsuarioActualizacionRequest;
 import gt.umg.ultimoarranque.dto.UsuarioRequest;
 import gt.umg.ultimoarranque.dto.UsuarioResponse;
 import gt.umg.ultimoarranque.modelo.Rol;
+import gt.umg.ultimoarranque.modelo.Usuario;
 import gt.umg.ultimoarranque.servicio.MecanicoService;
 import gt.umg.ultimoarranque.servicio.UsuarioService;
 import jakarta.validation.Valid;
@@ -17,9 +18,15 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 @Controller
 @RequestMapping("/usuarios")
 public class UsuarioWebController {
+
+    private static final String LISTA = "redirect:/usuarios";
 
     private final UsuarioService usuarioService;
     private final MecanicoService mecanicoService;
@@ -31,61 +38,53 @@ public class UsuarioWebController {
 
     @GetMapping
     public String listar(Model model) {
-        model.addAttribute("usuarios", usuarioService.listar().stream().map(UsuarioResponse::desde).toList());
-        return "usuarios/lista";
-    }
-
-    @GetMapping("/nuevo")
-    public String nuevo(Model model) {
-        return formulario(model, null);
-    }
-
-    @GetMapping("/{id}/editar")
-    public String editar(@PathVariable long id, Model model) {
-        return formulario(model, UsuarioResponse.desde(usuarioService.obtener(id)));
+        List<UsuarioResponse> usuarios = usuarioService.listar().stream().map(UsuarioResponse::desde).toList();
+        List<MecanicoResponse> mecanicos = mecanicoService.listar().stream().map(MecanicoResponse::desde).toList();
+        model.addAttribute("usuarios", usuarios);
+        model.addAttribute("mecanicos", mecanicos);
+        model.addAttribute("codigos", mecanicos.stream().collect(Collectors.toMap(MecanicoResponse::id, MecanicoResponse::codigo)));
+        // Un mecánico, un usuario: qué usuario tiene ya cada mecánico
+        Map<Long, Long> ocupados = usuarios.stream().filter(u -> u.idMecanico() != null)
+                .collect(Collectors.toMap(UsuarioResponse::idMecanico, UsuarioResponse::id, (a, b) -> a));
+        model.addAttribute("ocupados", ocupados);
+        model.addAttribute("roles", Rol.values());
+        return "usuarios";
     }
 
     @PostMapping
     public String registrar(@Valid UsuarioRequest solicitud, RedirectAttributes atributos) {
         usuarioService.registrar(solicitud);
-        atributos.addFlashAttribute("mensajeExito", "Usuario registrado");
-        return "redirect:/usuarios";
+        Aviso.exito(atributos, "Usuario creado");
+        return LISTA;
     }
 
     @PostMapping("/{id}")
     public String actualizar(@PathVariable long id, @Valid UsuarioActualizacionRequest solicitud,
                              RedirectAttributes atributos) {
+        Usuario anterior = usuarioService.obtener(id);
         usuarioService.actualizar(id, solicitud);
-        atributos.addFlashAttribute("mensajeExito", "Usuario actualizado");
-        return "redirect:/usuarios";
+        Aviso.exito(atributos, "Usuario actualizado", anterior.getRol() != solicitud.rol()
+                ? anterior.getUsername() + " deberá iniciar sesión de nuevo." : null);
+        return LISTA;
     }
 
     @PostMapping("/{id}/activar")
     public String activar(@PathVariable long id, RedirectAttributes atributos) {
-        usuarioService.activar(id);
-        atributos.addFlashAttribute("mensajeExito", "Usuario activado");
-        return "redirect:/usuarios";
+        Aviso.exito(atributos, usuarioService.activar(id).getUsername() + " activado");
+        return LISTA;
     }
 
     @PostMapping("/{id}/desactivar")
     public String desactivar(@PathVariable long id, RedirectAttributes atributos) {
-        usuarioService.desactivar(id);
-        atributos.addFlashAttribute("mensajeExito", "Usuario desactivado");
-        return "redirect:/usuarios";
+        Aviso.exito(atributos, usuarioService.desactivar(id).getUsername() + " desactivado");
+        return LISTA;
     }
 
     @PostMapping("/{id}/restablecer-password")
     public String restablecerPassword(@PathVariable long id, @Valid PasswordRequest solicitud,
                                       RedirectAttributes atributos) {
-        usuarioService.restablecerPassword(id, solicitud.password());
-        atributos.addFlashAttribute("mensajeExito", "Contraseña restablecida");
-        return "redirect:/usuarios";
-    }
-
-    private String formulario(Model model, UsuarioResponse usuario) {
-        model.addAttribute("form", usuario);
-        model.addAttribute("roles", Rol.values());
-        model.addAttribute("mecanicos", mecanicoService.listar().stream().map(MecanicoResponse::desde).toList());
-        return "usuarios/form";
+        Usuario usuario = usuarioService.restablecerPassword(id, solicitud.password());
+        Aviso.exito(atributos, "Contraseña restablecida", "Entréguela a " + usuario.getNombre() + ".");
+        return LISTA;
     }
 }

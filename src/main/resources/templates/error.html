@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="es" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragmentos :: head('Error')}"></head>
+<html lang="es-GT" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: cabeza('Error')}"></head>
 <body>
-<main class="container" style="padding-top: 3rem;">
-    <article>
-        <h1 th:text="${status == 403} ? 'Acceso denegado' : (${status == 404} ? 'Página no encontrada' : 'Ocurrió un error')">Ocurrió un error</h1>
-        <p th:text="${status == 403} ? 'Su rol no tiene permiso para esta sección.' : (${mensaje} ?: 'No se pudo completar la solicitud.')">
-            No se pudo completar la solicitud.
-        </p>
-        <a th:href="@{/}" role="button">Volver al inicio</a>
-    </article>
+<main class="canvas" style="max-width: 720px; margin: 0 auto; padding-top: 64px">
+    <div class="title-row">
+        <div>
+            <h1 th:text="${status == 403} ? 'Acceso denegado' : (${status == 404} ? 'Página no encontrada' : 'Ocurrió un error')">Ocurrió un error</h1>
+            <p class="sub" th:text="${status == 403} ? 'Su rol no tiene permiso para esta sección.' : (${status == 404} ? 'La dirección no existe.' : (${mensaje} ?: 'No se pudo completar la solicitud.'))"></p>
+        </div>
+    </div>
+    <a class="btn primary grande" th:href="@{/}">Volver a Taller hoy</a>
 </main>
 </body>
 </html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: pagina('Bitácora', 'bitacora', ~{::contenido})}">
+<body>
+<th:block th:fragment="contenido">
+    <div class="title-row">
+        <div>
+            <h1>Bitácora</h1>
+            <p class="sub">Quién hizo qué, cuándo y desde qué equipo. Se muestran los 200 registros más recientes del filtro.</p>
+        </div>
+    </div>
+
+    <form class="filtros" th:action="@{/bitacora}" method="get">
+        <div class="field">
+            <label for="bi-usuario">Usuario</label>
+            <select id="bi-usuario" class="input" name="idUsuario" data-auto-enviar>
+                <option value="">Todos</option>
+                <option th:each="u : ${usuarios}" th:value="${u.id()}" th:text="${u.username()}" th:selected="${u.id() == filtro.idUsuario()}"></option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="bi-accion">Acción</label>
+            <select id="bi-accion" class="input" name="accion" data-auto-enviar>
+                <option value="">Todas</option>
+                <option th:each="a : ${acciones}" th:value="${a}" th:text="${vista.accion(a)}" th:selected="${a == filtro.accion()}"></option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="bi-entidad">Registro</label>
+            <select id="bi-entidad" class="input" name="entidad" data-auto-enviar>
+                <option value="">Todos</option>
+                <option th:each="e : ${entidades}" th:value="${e}" th:text="${vista.entidad(e)}" th:selected="${e == filtro.entidad()}"></option>
+            </select>
+        </div>
+        <div class="field"><label for="bi-desde">Desde</label><input id="bi-desde" class="input num" type="date" name="desde" th:value="${filtro.desde()}" data-auto-enviar></div>
+        <div class="field"><label for="bi-hasta">Hasta</label><input id="bi-hasta" class="input num" type="date" name="hasta" th:value="${filtro.hasta()}" data-auto-enviar></div>
+        <a class="btn ghost" th:href="@{/bitacora}">Quitar filtros</a>
+    </form>
+
+    <section class="panel">
+        <div class="table-wrap">
+            <table class="tabla-movil">
+                <thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Registro</th><th>Detalle</th><th class="n">IP</th></tr></thead>
+                <tbody>
+                <tr th:each="b : ${registros}">
+                    <td class="num ocultar-movil" style="white-space: nowrap" th:text="${vista.fechaHora(b.fecha())}"></td>
+                    <td><span class="identidad" th:text="${b.usuario()}"></span></td>
+                    <td class="secundario" th:classappend="${b.accion().name() == 'INICIO_SESION_FALLIDO'} ? 'texto-negativo'" th:text="${vista.accion(b.accion())}"></td>
+                    <td class="ocultar-movil">
+                        <a th:if="${b.entidad().name() == 'ORDEN' and b.idEntidad() != null}" class="identidad"
+                           th:href="@{/ordenes/{id}(id=${b.idEntidad()})}" th:text="${vista.orden(b.idEntidad())}"></a>
+                        <th:block th:unless="${b.entidad().name() == 'ORDEN' and b.idEntidad() != null}">[[${vista.entidad(b.entidad())}]][[${b.idEntidad() != null ? ' ' + b.idEntidad() : ''}]]</th:block>
+                    </td>
+                    <td class="secundario" th:text="${b.detalle() ?: '—'}"></td>
+                    <td class="n num tenue ocultar-movil" th:text="${b.direccionIp() ?: '—'}"></td>
+                </tr>
+                <tr class="vacio-fila" th:if="${registros.isEmpty()}"><td colspan="6">No hay registros para estos filtros.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</th:block>
+</body>
+</html>

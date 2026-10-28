@@ -1,26 +1,54 @@
 <!DOCTYPE html>
-<html lang="es" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragmentos :: head('Mi cuenta')}"></head>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: pagina('Mi perfil', 'perfil', ~{::contenido})}">
 <body>
-<header th:replace="~{fragmentos :: menu}"></header>
-<main class="container" style="max-width: 36rem;">
-    <h2>Mi cuenta</h2>
-    <p>
-        <strong th:text="${perfil.nombre()}"></strong> (<span th:text="${perfil.username()}"></span>)<br>
-        Rol: <span th:text="${perfil.rol().etiqueta}"></span>
-        <span th:if="${perfil.mecanico() != null}" th:text="'· ' + ${perfil.mecanico()}"></span>
-    </p>
-    <h3>Cambiar contraseña</h3>
-    <form method="post" th:action="@{/perfil/password}">
-        <label>Contraseña actual
-            <input type="password" name="passwordActual" required autocomplete="current-password">
-        </label>
-        <label>Nueva contraseña
-            <input type="password" name="passwordNueva" required minlength="8" maxlength="72" autocomplete="new-password">
-            <small>Entre 8 y 72 caracteres, con letras y números. Al guardar deberá iniciar sesión de nuevo.</small>
-        </label>
-        <button type="submit">Cambiar contraseña</button>
-    </form>
-</main>
+<th:block th:fragment="contenido">
+    <div class="title-row">
+        <div>
+            <h1>Mi perfil</h1>
+            <p class="sub">Su cuenta en el sistema del taller.</p>
+        </div>
+    </div>
+
+    <section class="ajuste">
+        <div class="ajuste-etiqueta">
+            <h2>Cuenta</h2>
+            <p>El administrador asigna el rol y, para mecánicos, el registro de mecánico vinculado.</p>
+        </div>
+        <div class="panel">
+            <dl class="datos" style="padding-top: var(--card-pad)">
+                <dt>Nombre</dt><dd th:text="${perfil.nombre()}"></dd>
+                <dt>Usuario</dt><dd th:text="${perfil.username()}"></dd>
+                <dt>Rol</dt><dd th:text="${perfil.rol().etiqueta}"></dd>
+                <th:block th:if="${perfil.mecanico() != null}"><dt>Mecánico</dt><dd th:text="${perfil.mecanico()}"></dd></th:block>
+                <dt>Último acceso</dt><dd class="num" th:text="${vista.fechaHora(perfil.ultimoAcceso())}"></dd>
+                <dt>Sesión</dt><dd class="num">Activa hasta las [[${vista.hora(sesionExpira)}]]<small>Las sesiones duran 30 minutos.</small></dd>
+            </dl>
+        </div>
+    </section>
+
+    <section class="ajuste">
+        <div class="ajuste-etiqueta">
+            <h2>Contraseña</h2>
+            <p>Al cambiarla, cualquier otra sesión abierta con su usuario deja de ser válida.</p>
+        </div>
+        <div class="panel relleno">
+            <div class="alerta" role="alert" data-error-de="form-password-propia" hidden></div>
+            <form id="form-password-propia" class="formulario" th:action="@{/perfil/password}" method="post" novalidate>
+                <input type="hidden" name="_formulario" value="form-password-propia">
+                <div class="field completo">
+                    <label for="pf-actual">Contraseña actual</label>
+                    <input id="pf-actual" class="input" type="password" name="passwordActual" autocomplete="current-password" required>
+                </div>
+                <div class="field completo">
+                    <label for="pf-nueva">Contraseña nueva</label>
+                    <input id="pf-nueva" class="input" type="password" name="passwordNueva" aria-describedby="pf-nueva-ayuda" autocomplete="new-password"
+                           required pattern="(?=.*[A-Za-z])(?=.*\d).{8,72}" data-mensaje="Debe tener entre 8 y 72 caracteres e incluir letras y números">
+                    <span class="hint" id="pf-nueva-ayuda">De 8 a 72 caracteres, con letras y números.</span>
+                </div>
+                <div class="field completo" style="justify-items: end"><button type="submit" class="btn primary">Cambiar contraseña</button></div>
+            </form>
+        </div>
+    </section>
+</th:block>
 </body>
 </html>

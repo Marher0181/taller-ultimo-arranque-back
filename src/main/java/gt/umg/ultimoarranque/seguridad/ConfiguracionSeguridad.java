@@ -35,6 +35,7 @@ public class ConfiguracionSeguridad {
 
     private static final String ALGORITMO_CLAVE = "HmacSHA256";
     private static final String[] RUTAS_PUBLICAS = {"/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/error"};
+    static final String[] RECURSOS_ESTATICOS = {"/css/**", "/js/**", "/fuentes/**", "/favicon.ico"};
     private static final String[] RUTAS_API = {"/api/**", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**"};
     private static final String ADMIN = Rol.ADMIN.name();
     private static final String RECEPCION = Rol.RECEPCION.name();
@@ -110,11 +111,11 @@ public class ConfiguracionSeguridad {
 
     private void reglasDeAccesoWeb(
             AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry reglas) {
-        reglas.requestMatchers("/error").permitAll()
+        reglas.requestMatchers(RECURSOS_ESTATICOS).permitAll()
+                .requestMatchers("/error").permitAll()
                 .requestMatchers("/usuarios/**", "/bitacora/**").hasRole(ADMIN)
-                .requestMatchers("/ordenes/nueva").hasAnyRole(ADMIN, RECEPCION)
                 .requestMatchers("/perfil/**").authenticated()
-                .requestMatchers(HttpMethod.GET, "/", "/ordenes", "/ordenes/*", "/ordenes/*/comprobante/pdf",
+                .requestMatchers(HttpMethod.GET, "/", "/buscar", "/ordenes", "/ordenes/*", "/ordenes/*/comprobante/pdf",
                         "/repuestos", "/servicios")
                 .hasAnyRole(ADMIN, RECEPCION, MECANICO)
                 .requestMatchers("/ordenes/*/servicios/**").hasAnyRole(ADMIN, RECEPCION, MECANICO)

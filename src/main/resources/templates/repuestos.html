@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: pagina('Repuestos', 'repuestos', ~{::contenido})}">
+<body>
+<th:block th:fragment="contenido" th:with="puedeEditar=${vista.puede(sesionActual, 'repuestos.editar')}">
+    <div class="title-row">
+        <div>
+            <h1>Repuestos</h1>
+            <p class="sub">Bajo inventario significa [[${umbral}]] unidades o menos. Las existencias bajan al asignar repuestos a una orden en reparación.</p>
+        </div>
+        <div class="acciones" th:if="${puedeEditar}"><button type="button" class="btn primary grande" data-abrir="dlg-repuesto">Nuevo repuesto</button></div>
+    </div>
+
+    <form class="tabs" role="tablist" aria-label="Filtrar por nivel de inventario" th:action="@{/repuestos}" method="get">
+        <button type="submit" role="tab" name="nivel" value="" th:aria-selected="${nivel == null}">Todos<span class="num" th:text="${total}"></span></button>
+        <button type="submit" role="tab" name="nivel" value="AGOTADO" th:aria-selected="${nivel?.name() == 'AGOTADO'}">Agotados<span class="num" th:text="${conteo['AGOTADO']}"></span></button>
+        <button type="submit" role="tab" name="nivel" value="BAJO" th:aria-selected="${nivel?.name() == 'BAJO'}">Bajo inventario<span class="num" th:text="${conteo['BAJO']}"></span></button>
+        <button type="submit" role="tab" name="nivel" value="DISPONIBLE" th:aria-selected="${nivel?.name() == 'DISPONIBLE'}">Disponibles<span class="num" th:text="${conteo['DISPONIBLE']}"></span></button>
+    </form>
+
+    <div class="barra-herramientas">
+        <label class="oculto" for="buscar-repuestos">Buscar repuestos</label>
+        <input id="buscar-repuestos" class="input" type="search" placeholder="Nombre o código" data-filtrar="tabla-repuestos">
+        <span class="total num" data-total-de="tabla-repuestos" data-singular="repuesto" data-plural="repuestos"
+              th:text="|${repuestos.size()} ${repuestos.size() == 1 ? 'repuesto' : 'repuestos'}|"></span>
+    </div>
+
+    <section class="panel">
+        <div class="table-wrap">
+            <table class="tabla-movil" id="tabla-repuestos">
+                <thead><tr><th>Código</th><th>Repuesto</th><th class="n">Precio</th><th class="n">Existencia</th><th>Nivel</th><th th:if="${puedeEditar}"><span class="oculto">Acciones</span></th></tr></thead>
+                <tbody>
+                <tr class="vacio-fila" data-vacio-filtro hidden><td colspan="6">Ningún repuesto coincide con el filtro.</td></tr>
+                <tr th:each="r : ${repuestos}" th:data-buscar="${vista.buscable(r.nombre(), r.codigo())}">
+                    <td class="tenue ocultar-movil" th:text="${r.codigo()}"></td>
+                    <td><span class="identidad" th:text="${r.nombre()}"></span><span class="sub" th:text="${r.descripcion() ?: r.codigo()}"></span></td>
+                    <td class="n num secundario" th:text="${vista.moneda(r.precio())}"></td>
+                    <td class="n num" th:text="${r.existencia()}"></td>
+                    <td><span th:replace="~{layout :: estado(${r.nivelInventario()})}"></span></td>
+                    <td th:if="${puedeEditar}" class="acciones-fila">
+                        <button type="button" class="btn texto" data-abrir="dlg-abastecer" th:data-titulo="'Abastecer ' + ${r.nombre()}"
+                                th:data-accion="@{/repuestos/{id}/abastecer(id=${r.id()})}" th:data-valores="${vista.json(r)}">Abastecer</button>
+                        &nbsp;&nbsp;
+                        <button type="button" class="btn texto" data-abrir="dlg-repuesto" data-modo="editar" th:data-titulo="'Editar ' + ${r.nombre()}"
+                                th:data-accion="@{/repuestos/{id}(id=${r.id()})}" th:data-valores="${vista.json(r)}">Editar</button>
+                    </td>
+                </tr>
+                <tr class="vacio-fila" th:if="${repuestos.isEmpty()}"><td colspan="6" th:text="${nivel?.name() == 'AGOTADO'} ? 'No hay repuestos agotados.' : 'Ningún repuesto coincide con el filtro.'"></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <th:block th:if="${puedeEditar}">
+    <dialog id="dlg-repuesto" class="dialogo" aria-labelledby="dlg-repuesto-titulo">
+        <header th:replace="~{layout :: cabezaDialogo('dlg-repuesto', 'Nuevo repuesto')}"></header>
+        <div class="dialogo-cuerpo">
+            <div class="alerta" role="alert" data-error-de="form-repuesto" hidden></div>
+            <form id="form-repuesto" class="formulario" th:action="@{/repuestos}" method="post" novalidate>
+                <input type="hidden" name="_formulario" value="form-repuesto"><input type="hidden" name="_modo"><input type="hidden" name="_titulo">
+                <div class="field">
+                    <label for="re-codigo">Código</label>
+                    <input id="re-codigo" class="input" name="codigo" autocomplete="off" style="text-transform: uppercase" required maxlength="30" data-normalizar="mayusculas">
+                </div>
+                <div class="field">
+                    <label for="re-precio">Precio unitario (Q)</label>
+                    <input id="re-precio" class="input num" type="number" min="0" step="0.01" name="precio" required>
+                </div>
+                <div class="field completo">
+                    <label for="re-nombre">Nombre</label>
+                    <input id="re-nombre" class="input" name="nombre" autocomplete="off" required maxlength="100">
+                </div>
+                <div class="field completo">
+                    <label for="re-descripcion">Descripción</label>
+                    <input id="re-descripcion" class="input" name="descripcion" autocomplete="off" maxlength="255">
+                </div>
+                <div class="field">
+                    <label for="re-existencia">Existencia inicial</label>
+                    <input id="re-existencia" class="input num" type="number" min="0" step="1" name="existencia" value="0" required data-bloquear="editar">
+                    <span class="hint" data-solo="editar" hidden>La existencia cambia con Abastecer y al usar repuestos en órdenes.</span>
+                </div>
+            </form>
+        </div>
+        <footer class="dialogo-pie">
+            <button type="button" class="btn" data-cerrar>Cancelar</button>
+            <button type="submit" form="form-repuesto" class="btn primary" data-texto-nuevo="Registrar repuesto" data-texto-editar="Guardar cambios">Registrar repuesto</button>
+        </footer>
+    </dialog>
+
+    <dialog id="dlg-abastecer" class="dialogo" aria-labelledby="dlg-abastecer-titulo">
+        <header th:replace="~{layout :: cabezaDialogo('dlg-abastecer', 'Abastecer')}"></header>
+        <div class="dialogo-cuerpo">
+            <div class="alerta" role="alert" data-error-de="form-abastecer" hidden></div>
+            <p>Hay <b class="num" data-texto="existencia"></b> unidades. Las unidades recibidas se suman a esa existencia.</p>
+            <form id="form-abastecer" th:action="@{/repuestos}" method="post" novalidate>
+                <input type="hidden" name="_formulario" value="form-abastecer"><input type="hidden" name="_titulo">
+                <div class="field">
+                    <label for="cantidad-abastecer">Unidades recibidas</label>
+                    <input id="cantidad-abastecer" class="input num" type="number" min="1" step="1" name="cantidad" required>
+                </div>
+            </form>
+        </div>
+        <footer class="dialogo-pie">
+            <button type="button" class="btn" data-cerrar>Cancelar</button>
+            <button type="submit" form="form-abastecer" class="btn primary">Sumar al inventario</button>
+        </footer>
+    </dialog>
+    </th:block>
+</th:block>
+</body>
+</html>

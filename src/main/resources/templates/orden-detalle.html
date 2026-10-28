@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: pagina('Orden de trabajo', 'ordenes', ~{::contenido})}">
+<body>
+<th:block th:fragment="contenido">
+<th:block th:if="${error}">
+    <nav class="miga" aria-label="Ruta"><a th:href="@{/ordenes}">Órdenes</a><span aria-hidden="true">/</span><h1 th:text="${vista.orden(id)}"></h1></nav>
+    <div class="panel estado-error" role="alert">
+        <span th:text="${error}"></span>
+        <a class="card-link" th:href="@{/ordenes}">Volver a órdenes</a>
+    </div>
+</th:block>
+
+<th:block th:unless="${error}" th:with="o=${orden}, numero=${vista.orden(orden.id())}">
+    <div class="title-row" style="margin-bottom: 16px">
+        <nav class="miga" aria-label="Ruta" style="margin: 0">
+            <a th:href="@{/ordenes}">Órdenes</a><span aria-hidden="true">/</span><h1 th:text="${numero}"></h1><span th:replace="~{layout :: estado(${o.estado()})}"></span>
+        </nav>
+        <div class="acciones">
+            <button th:if="${activa and vista.puede(sesionActual, 'ordenes.editar')}" type="button" class="btn" data-abrir="dlg-editar" data-modo="editar">Editar datos</button>
+            <button th:if="${activa and vista.puede(sesionActual, 'ordenes.cancelar')}" type="button" class="btn peligro" data-abrir="dlg-cancelar">Cancelar orden</button>
+            <form th:if="${o.estado().name() == 'PENDIENTE' and vista.puede(sesionActual, 'ordenes.trabajar')}" th:action="@{/ordenes/{id}/iniciar(id=${o.id()})}" method="post">
+                <button type="submit" class="btn primary">Iniciar reparación</button>
+            </form>
+            <button th:if="${o.estado().name() == 'EN_PROCESO' and vista.puede(sesionActual, 'ordenes.trabajar')}" type="button" class="btn primary" data-abrir="dlg-finalizar">Finalizar y emitir comprobante</button>
+            <a th:if="${o.comprobante() != null}" class="btn primary" th:href="@{/ordenes/{id}/comprobante/pdf(id=${o.id()})}"
+               th:download="|comprobante-${numero}.pdf|">Descargar comprobante PDF</a>
+        </div>
+    </div>
+
+    <section class="cabecera-orden">
+        <span th:replace="~{layout :: placa(${o.vehiculo().placa()}, true)}"></span>
+        <div>
+            <p class="vehiculo">[[|${o.vehiculo().marca()} ${o.vehiculo().modelo()} ${o.vehiculo().anio()}|]]<span class="tenue" th:text="${o.vehiculo().color() != null ? ', ' + o.vehiculo().color() : ''}"></span></p>
+            <p class="tenue" th:text="${o.vehiculo().nombreCliente()}"></p>
+        </div>
+        <ol class="pasos" aria-label="Progreso de la orden">
+            <th:block th:each="paso, i : ${pasos}">
+                <li th:unless="${i.first}" class="paso-linea" th:classappend="${paso.clase() == 'hecho'} ? 'hecha'" aria-hidden="true"></li>
+                <li th:class="'paso ' + ${paso.clase()}" th:aria-current="${paso.clase() == 'actual' ? 'step' : null}">
+                    <i th:switch="${paso.clase()}">
+                        <app-icono th:case="'hecho'" th:insert="~{layout :: icono('hecho')}"></app-icono>
+                        <app-icono th:case="'cancelado'" th:insert="~{layout :: icono('cerrar')}"></app-icono>
+                        <th:block th:case="*">[[${paso.marca()}]]</th:block>
+                    </i>[[${paso.texto()}]]
+                </li>
+            </th:block>
+        </ol>
+    </section>
+
+    <div class="grid con-rail">
+        <div class="columna">
+            <section class="panel" aria-labelledby="titulo-servicios">
+                <header class="panel-cabeza">
+                    <h2 id="titulo-servicios">Servicios</h2>
+                    <span class="meta num">[[${o.servicios().size()}]] [[${o.servicios().size() == 1 ? 'servicio' : 'servicios'}]], [[${vista.moneda(o.costos().manoObra())}]] de mano de obra</span>
+                </header>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th class="ocultar-movil">Código</th><th>Servicio</th><th class="n">Mano de obra</th><th th:if="${puedeServicios}"><span class="oculto">Acción</span></th></tr></thead>
+                        <tbody>
+                        <tr th:each="s : ${o.servicios()}">
+                            <td class="tenue ocultar-movil" th:text="${s.codigo()}"></td>
+                            <td th:text="${s.descripcion()}"></td>
+                            <td class="n num" th:text="${vista.moneda(s.costoManoObra())}"></td>
+                            <td th:if="${puedeServicios}" class="acciones-fila">
+                                <form th:action="@{/ordenes/{id}/servicios/{s}/quitar(id=${o.id()}, s=${s.idServicio()})}" method="post" style="display: inline">
+                                    <button type="submit" class="btn texto peligro">Quitar</button>
+                                </form>
+                            </td>
+                        </tr>
+                        <tr class="vacio-fila" th:if="${o.servicios().isEmpty()}"><td colspan="4">Aún no hay servicios. La orden necesita al menos uno para poder finalizarse.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <form th:if="${puedeServicios}" id="form-agregar-servicio" class="linea-agregar" th:action="@{/ordenes/{id}/servicios(id=${o.id()})}" method="post" novalidate>
+                    <input type="hidden" name="_formulario" value="form-agregar-servicio">
+                    <label class="oculto" for="nuevo-servicio">Servicio a agregar</label>
+                    <select id="nuevo-servicio" class="input" name="idServicio" required data-requerido="Seleccione el servicio que se realizó">
+                        <option value="">Seleccione un servicio del catálogo</option>
+                        <option th:each="s : ${serviciosDisponibles}" th:value="${s.id()}" th:text="|${s.descripcion()} (${vista.moneda(s.costoManoObra())})|"></option>
+                    </select>
+                    <button type="submit" class="btn">Agregar servicio</button>
+                    <span class="error-linea" role="alert" data-error-de="form-agregar-servicio" hidden></span>
+                </form>
+            </section>
+
+            <section class="panel" aria-labelledby="titulo-repuestos">
+                <header class="panel-cabeza">
+                    <h2 id="titulo-repuestos">Repuestos</h2>
+                    <span class="meta num">[[${unidadesRepuestos}]] [[${unidadesRepuestos == 1 ? 'unidad' : 'unidades'}]], [[${vista.moneda(o.costos().repuestos())}]]</span>
+                </header>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th class="ocultar-movil">Código</th><th>Repuesto</th><th class="n">Cant.</th><th class="n">Precio</th><th class="n">Subtotal</th><th th:if="${puedeRepuestos}"><span class="oculto">Acción</span></th></tr></thead>
+                        <tbody>
+                        <tr th:each="r : ${o.repuestos()}">
+                            <td class="tenue ocultar-movil" th:text="${r.codigo()}"></td>
+                            <td th:text="${r.nombre()}"></td>
+                            <td class="n num" th:text="${r.cantidad()}"></td>
+                            <td class="n num" th:text="${vista.moneda(r.precioUnitario())}"></td>
+                            <td class="n num" th:text="${vista.moneda(r.subtotal())}"></td>
+                            <td th:if="${puedeRepuestos}" class="acciones-fila">
+                                <form th:action="@{/ordenes/{id}/repuestos/{d}/retirar(id=${o.id()}, d=${r.idDetalle()})}" method="post" style="display: inline">
+                                    <button type="submit" class="btn texto peligro">Retirar</button>
+                                </form>
+                            </td>
+                        </tr>
+                        <tr class="vacio-fila" th:if="${o.repuestos().isEmpty()}">
+                            <td colspan="6" th:text="${o.estado().name() == 'PENDIENTE'} ? 'Los repuestos se asignan cuando la reparación está en proceso.' : 'No se asignaron repuestos.'"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <form th:if="${puedeRepuestos}" id="form-asignar-repuesto" class="linea-agregar" th:action="@{/ordenes/{id}/repuestos(id=${o.id()})}" method="post" novalidate>
+                    <input type="hidden" name="_formulario" value="form-asignar-repuesto">
+                    <label class="oculto" for="nuevo-repuesto">Repuesto a asignar</label>
+                    <select id="nuevo-repuesto" class="input" name="idRepuesto" required data-requerido="Seleccione el repuesto">
+                        <option value="">Seleccione un repuesto de bodega</option>
+                        <option th:each="r : ${catalogoRepuestos}" th:value="${r.id()}" th:disabled="${r.existencia() == 0}"
+                                th:text="|${r.nombre()} (${vista.moneda(r.precio())}, disponibles: ${r.existencia()})|"></option>
+                    </select>
+                    <label class="oculto" for="cantidad-repuesto">Cantidad</label>
+                    <input id="cantidad-repuesto" class="input" type="number" min="1" step="1" name="cantidad" value="1" required
+                           data-requerido="La cantidad debe ser un número entero mayor que cero" data-mensaje="La cantidad debe ser un número entero mayor que cero">
+                    <button type="submit" class="btn">Asignar y descontar</button>
+                    <span class="error-linea" role="alert" data-error-de="form-asignar-repuesto" hidden></span>
+                </form>
+            </section>
+        </div>
+
+        <aside class="columna" aria-label="Costos y datos de la orden">
+            <section class="panel" aria-labelledby="titulo-costos">
+                <header class="panel-cabeza">
+                    <h2 id="titulo-costos" th:text="${o.comprobante() != null} ? 'Comprobante ' + ${o.comprobante().numero()} : 'Costo estimado'"></h2>
+                    <span class="meta" th:text="${o.comprobante() != null} ? ${vista.fechaHora(o.comprobante().fechaEmision())} : 'se fija al finalizar'"></span>
+                </header>
+                <div class="totales">
+                    <div><span>Mano de obra</span><span th:text="${vista.moneda(o.costos().manoObra())}"></span></div>
+                    <div><span>Repuestos</span><span th:text="${vista.moneda(o.costos().repuestos())}"></span></div>
+                    <div><span>Subtotal</span><span th:text="${vista.moneda(o.costos().subtotal())}"></span></div>
+                    <div><span>IVA ([[${vista.porcentaje(o.costos().tasaIva())}]]%)</span><span th:text="${vista.moneda(o.costos().iva())}"></span></div>
+                    <div class="total"><span>Total</span><span class="respuesta" th:text="${vista.moneda(o.costos().total())}"></span></div>
+                </div>
+            </section>
+
+            <section class="panel" aria-labelledby="titulo-datos">
+                <header class="panel-cabeza"><h2 id="titulo-datos">Datos de la orden</h2></header>
+                <dl class="datos">
+                    <dt>Problema</dt><dd th:text="${o.descripcionProblema()}"></dd>
+                    <dt>Mecánico</dt><dd>[[${o.mecanico().nombre()}]]<small th:text="${o.mecanico().codigo() + (o.mecanico().especialidad() != null ? ', ' + o.mecanico().especialidad() : '')}"></small></dd>
+                    <dt>Recepción</dt><dd>[[${vista.fechaHora(o.fechaCreacion())}]]<small th:text="'por ' + ${o.registradaPor().nombre()}"></small></dd>
+                    <dt>Inicio</dt><dd>[[${vista.fechaHora(o.fechaInicio())}]]<small th:if="${o.iniciadaPor() != null}" th:text="'por ' + ${o.iniciadaPor().nombre()}"></small></dd>
+                    <th:block th:if="${o.estado().name() == 'CANCELADA'}">
+                        <dt>Cancelación</dt><dd>[[${vista.fechaHora(o.fechaCancelacion())}]]<small th:text="'por ' + ${o.cerradaPor()?.nombre()} + ${o.motivoCancelacion() != null ? ': ' + o.motivoCancelacion() : ''}"></small></dd>
+                    </th:block>
+                    <th:block th:unless="${o.estado().name() == 'CANCELADA'}">
+                        <dt>Finalización</dt><dd>[[${vista.fechaHora(o.fechaFinalizacion())}]]<small th:if="${o.cerradaPor() != null}" th:text="'por ' + ${o.cerradaPor().nombre()}"></small></dd>
+                    </th:block>
+                </dl>
+            </section>
+        </aside>
+    </div>
+
+    <dialog id="dlg-finalizar" class="dialogo" aria-labelledby="dlg-finalizar-titulo" th:if="${o.estado().name() == 'EN_PROCESO'}">
+        <header th:replace="~{layout :: cabezaDialogo('dlg-finalizar', 'Finalizar ' + ${numero})}"></header>
+        <div class="dialogo-cuerpo">
+            <div class="alerta" role="alert" data-error-de="form-finalizar" hidden></div>
+            <form id="form-finalizar" th:action="@{/ordenes/{id}/finalizar(id=${o.id()})}" method="post"><input type="hidden" name="_formulario" value="form-finalizar"></form>
+            <p>Se emitirá el comprobante por <b class="num" th:text="${vista.moneda(o.costos().total())}"></b>, IVA incluido, con [[${o.servicios().size()}]] [[${o.servicios().size() == 1 ? 'servicio' : 'servicios'}]] y [[${unidadesRepuestos}]] [[${unidadesRepuestos == 1 ? 'repuesto' : 'repuestos'}]].</p>
+            <p class="tenue">Después de finalizar, la orden ya no admite cambios.</p>
+        </div>
+        <footer class="dialogo-pie">
+            <button type="button" class="btn" data-cerrar>Volver</button>
+            <button type="submit" form="form-finalizar" class="btn primary">Finalizar y emitir</button>
+        </footer>
+    </dialog>
+
+    <dialog id="dlg-cancelar" class="dialogo" aria-labelledby="dlg-cancelar-titulo" th:if="${activa}">
+        <header th:replace="~{layout :: cabezaDialogo('dlg-cancelar', 'Cancelar ' + ${numero})}"></header>
+        <div class="dialogo-cuerpo">
+            <div class="alerta" role="alert" data-error-de="form-cancelar" hidden></div>
+            <p>[[${unidadesRepuestos > 0 ? 'Las ' + unidadesRepuestos + ' unidades de repuestos asignadas regresarán al inventario.' : 'La orden no tiene repuestos asignados.'}]] Una orden cancelada no admite cambios.</p>
+            <form id="form-cancelar" th:action="@{/ordenes/{id}/cancelar(id=${o.id()})}" method="post" novalidate>
+                <input type="hidden" name="_formulario" value="form-cancelar">
+                <div class="field">
+                    <label for="motivo-cancelacion">Motivo de la cancelación (opcional)</label>
+                    <textarea id="motivo-cancelacion" class="input" name="motivo" maxlength="255"></textarea>
+                </div>
+            </form>
+        </div>
+        <footer class="dialogo-pie">
+            <button type="button" class="btn" data-cerrar>Volver</button>
+            <button type="submit" form="form-cancelar" class="btn peligro lleno">Cancelar orden</button>
+        </footer>
+    </dialog>
+
+    <dialog id="dlg-editar" class="dialogo" aria-labelledby="dlg-editar-titulo" th:if="${mecanicos != null}">
+        <header th:replace="~{layout :: cabezaDialogo('dlg-editar', 'Editar ' + ${numero})}"></header>
+        <div class="dialogo-cuerpo">
+            <div class="alerta" role="alert" data-error-de="form-editar-orden" hidden></div>
+            <form id="form-editar-orden" class="formulario" th:action="@{/ordenes/{id}(id=${o.id()})}" method="post" novalidate>
+                <input type="hidden" name="_formulario" value="form-editar-orden">
+                <div class="field completo">
+                    <label for="eo-mecanico">Mecánico asignado</label>
+                    <select id="eo-mecanico" class="input" name="idMecanico" required>
+                        <option th:each="m : ${mecanicos}" th:value="${m.id()}" th:text="|${m.codigo()} ${m.nombre()}|" th:selected="${m.id() == o.mecanico().id()}"></option>
+                    </select>
+                </div>
+                <div class="field completo">
+                    <label for="eo-problema">Problema reportado</label>
+                    <textarea id="eo-problema" class="input" name="descripcionProblema" maxlength="500" required th:text="${o.descripcionProblema()}"></textarea>
+                </div>
+            </form>
+        </div>
+        <footer class="dialogo-pie">
+            <button type="button" class="btn" data-cerrar>Cancelar</button>
+            <button type="submit" form="form-editar-orden" class="btn primary">Guardar cambios</button>
+        </footer>
+    </dialog>
+</th:block>
+</th:block>
+</body>
+</html>

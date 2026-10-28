@@ -25,6 +25,12 @@ public class FiltroSesionWeb extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String ruta = request.getServletPath();
+        return ruta.startsWith("/css/") || ruta.startsWith("/js/") || ruta.startsWith("/fuentes/") || ruta.equals("/favicon.ico");
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain cadena)
             throws ServletException, IOException {
         Authentication autenticacion = SecurityContextHolder.getContext().getAuthentication();

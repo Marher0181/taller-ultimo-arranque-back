@@ -1,21 +1,38 @@
 <!DOCTYPE html>
-<html lang="es" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragmentos :: head('Iniciar sesión')}"></head>
+<html lang="es-GT" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: cabeza('Iniciar sesión')}"></head>
 <body>
-<main class="container" style="max-width: 26rem; padding-top: 4rem;">
-    <article>
-        <h1>El Último Arranque</h1>
-        <p>Inicie sesión para continuar.</p>
-        <div class="aviso error" th:if="${param.error}" role="alert">Usuario o contraseña incorrectos.</div>
-        <div class="aviso error" th:if="${param.expirada}" role="alert">Su sesión ya no es válida; inicie sesión nuevamente.</div>
-        <div class="aviso exito" th:if="${param.salida}" role="status">Sesión cerrada.</div>
-        <div class="aviso exito" th:if="${param.cambio}" role="status">Contraseña actualizada; inicie sesión con la nueva.</div>
-        <form th:action="@{/login}" method="post">
-            <label>Usuario <input name="username" autocomplete="username" required autofocus></label>
-            <label>Contraseña <input type="password" name="password" autocomplete="current-password" required></label>
-            <button type="submit">Iniciar sesión</button>
+<main class="login">
+    <section class="login-marca" aria-labelledby="login-titulo">
+        <svg class="letrero" viewBox="0 0 520 260" role="img" aria-label="Placa del taller El Último Arranque">
+            <rect x="4" y="4" width="512" height="252" rx="18" fill="#ffffff" stroke="#1b2230" stroke-width="6"/>
+            <path d="M10 22a12 12 0 0 1 12-12h476a12 12 0 0 1 12 12v32H10z" fill="#1f4fa3"/>
+            <text x="260" y="42" text-anchor="middle" font-family="Barlow, sans-serif" font-size="20" font-weight="600" fill="#ffffff" letter-spacing="6">TALLER MECÁNICO</text>
+            <text x="260" y="146" text-anchor="middle" font-family="Barlow, sans-serif" font-size="72" font-weight="700" fill="#141a24" letter-spacing="2">EL ÚLTIMO</text>
+            <text x="260" y="222" text-anchor="middle" font-family="Barlow, sans-serif" font-size="72" font-weight="700" fill="#141a24" letter-spacing="2">ARRANQUE</text>
+        </svg>
+        <h1 id="login-titulo">Órdenes de trabajo del taller</h1>
+        <p>Recepción registra el vehículo, el mecánico lo repara y al finalizar se emite el comprobante en quetzales.</p>
+    </section>
+
+    <section class="login-formulario panel" aria-label="Iniciar sesión">
+        <h2>Iniciar sesión</h2>
+        <div class="alerta" role="alert" th:if="${param.error}">Usuario o contraseña incorrectos</div>
+        <div class="alerta" role="alert" th:if="${param.expirada}">Su sesión expiró o ya no es válida. Inicie sesión de nuevo.</div>
+        <form id="form-login" th:action="@{/login}" method="post" novalidate>
+            <div class="field">
+                <label for="login-usuario">Usuario</label>
+                <input id="login-usuario" class="input" name="username" autocomplete="username" autocapitalize="none" required>
+            </div>
+            <div class="field">
+                <label for="login-password">Contraseña</label>
+                <input id="login-password" class="input" type="password" name="password" autocomplete="current-password" required>
+            </div>
+            <button class="btn primary grande" type="submit">Iniciar sesión</button>
         </form>
-    </article>
+        <p class="tenue">La sesión dura 30 minutos. Si olvidó su contraseña, pida al administrador que la restablezca.</p>
+    </section>
 </main>
+<script th:src="@{/js/taller.js}"></script>
 </body>
 </html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: pagina('Taller hoy', 'inicio', ~{::contenido})}">
+<body>
+<th:block th:fragment="contenido">
+    <div class="title-row">
+        <div>
+            <h1 th:text="${esMecanico} ? 'Mis órdenes de hoy' : 'Taller hoy'">Taller hoy</h1>
+            <p class="sub" th:text="${hallazgo}"></p>
+        </div>
+        <div class="acciones" th:if="${vista.puede(sesionActual, 'ordenes.crear')}">
+            <button type="button" class="btn primary grande" data-abrir="dlg-nueva-orden">Nueva orden</button>
+        </div>
+    </div>
+
+    <section class="kpis" aria-label="Resumen">
+        <div class="kpi">
+            <div class="kpi-label">Esperando inicio</div>
+            <div class="kpi-value" th:text="${pendientes}"></div>
+            <div class="kpi-nota">recibidos, sin iniciar</div>
+        </div>
+        <div class="kpi">
+            <div class="kpi-label">En reparación</div>
+            <div class="kpi-value" th:text="${enProceso}"></div>
+            <div class="kpi-nota">con el mecánico trabajando</div>
+        </div>
+        <div class="kpi">
+            <div class="kpi-label">Finalizadas en [[${mes}]]</div>
+            <div class="kpi-value" th:text="${finalizadasMes}"></div>
+            <div class="kpi-nota">con comprobante emitido</div>
+        </div>
+        <div class="kpi" th:if="${esMecanico}">
+            <div class="kpi-label">Repuestos con 5 o menos</div>
+            <div class="kpi-value" th:text="${repuestos.size()}"></div>
+            <div class="kpi-nota" th:classappend="${agotados > 0} ? 'alerta'">[[${agotados}]] agotados</div>
+        </div>
+        <div class="kpi" th:unless="${esMecanico}">
+            <div class="kpi-label">Facturado en [[${mes}]]</div>
+            <div class="kpi-value" th:text="${vista.moneda(facturadoMes)}"></div>
+            <div class="kpi-nota">IVA incluido, de [[${finalizadasMes}]] comprobantes</div>
+        </div>
+    </section>
+
+    <div class="grid con-rail">
+        <div class="columna">
+            <section class="panel" aria-labelledby="titulo-carga">
+                <header class="panel-cabeza">
+                    <h2 id="titulo-carga" th:text="${esMecanico} ? 'Vehículos a mi cargo' : 'Carga por mecánico'"></h2>
+                    <div class="leyenda" aria-hidden="true"><span><i class="punteada"></i>Esperando inicio</span><span><i></i>En reparación</span></div>
+                </header>
+                <div class="carril" th:each="carril : ${carriles}">
+                    <div class="carril-nombre">
+                        <b th:text="${carril.nombre()}"></b>
+                        <small>[[${carril.codigo()}]][[${carril.codigo() != '' ? ', ' : ''}]][[${carril.ordenes().size()}]] [[${carril.ordenes().size() == 1 ? 'vehículo' : 'vehículos'}]]</small>
+                    </div>
+                    <div class="carril-ordenes">
+                        <a th:each="orden : ${carril.ordenes()}" th:class="'ficha ' + ${orden.estado()}" th:href="@{/ordenes/{id}(id=${orden.id()})}"
+                           th:aria-label="|${vista.orden(orden.id())}, ${orden.placa()}, ${orden.estado().name() == 'PENDIENTE' ? 'esperando inicio' : 'en reparación'}|">
+                            <span class="placa"><span class="placa-banda"></span><b th:text="${orden.placa()}"></b></span>
+                            <span><b th:text="${vista.orden(orden.id())}"></b><small th:text="${orden.vehiculo()}"></small></span>
+                        </a>
+                        <span class="tenue" th:if="${carril.ordenes().isEmpty()}">Sin vehículos asignados</span>
+                    </div>
+                </div>
+                <p class="empty" th:if="${carriles.isEmpty()}">No hay órdenes pendientes ni en reparación.</p>
+            </section>
+
+            <section class="panel" aria-labelledby="titulo-recientes" th:unless="${esMecanico}">
+                <header class="panel-cabeza">
+                    <h2 id="titulo-recientes">Últimas órdenes registradas</h2>
+                    <a class="card-link" th:href="@{/ordenes}">Ver todas</a>
+                </header>
+                <div class="table-wrap">
+                    <table class="tabla-movil">
+                        <thead><tr><th>Orden</th><th>Placa</th><th>Cliente</th><th>Estado</th><th class="n">Recepción</th></tr></thead>
+                        <tbody>
+                        <tr th:each="o : ${recientes}">
+                            <td><a class="identidad" th:href="@{/ordenes/{id}(id=${o.id()})}" th:text="${vista.orden(o.id())}"></a></td>
+                            <td><span class="placa"><span class="placa-banda"></span><b th:text="${o.placa()}"></b></span></td>
+                            <td class="secundario" th:text="${o.cliente()}"></td>
+                            <td><span th:replace="~{layout :: estado(${o.estado()})}"></span></td>
+                            <td class="n num ocultar-movil" th:text="${vista.fecha(o.fechaCreacion())}"></td>
+                        </tr>
+                        <tr class="vacio-fila" th:if="${recientes.isEmpty()}"><td colspan="5">Aún no se registran órdenes.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <aside class="columna" aria-label="Pendientes del taller">
+            <div>
+                <h2 class="rail-titulo">Repuestos por reabastecer</h2>
+                <section class="panel lista-rail">
+                    <div class="fila" th:each="r, i : ${repuestos}" th:if="${i.index < 5}">
+                        <div class="crece"><span th:text="${r.nombre()}"></span><small th:text="${r.codigo()}"></small></div>
+                        <span class="num">[[${r.existencia()}]]<span class="tenue"> u.</span></span>
+                        <span th:replace="~{layout :: estado(${r.nivelInventario()})}"></span>
+                    </div>
+                    <div class="fila" th:if="${repuestos.isEmpty()}"><span class="tenue">Todo el inventario tiene más de 5 unidades.</span></div>
+                    <div class="pie-rail"><a class="card-link" th:href="@{/repuestos}"
+                                             th:text="${repuestos.size() > 5} ? |Ver los ${repuestos.size()} repuestos| : 'Ir al inventario'"></a></div>
+                </section>
+            </div>
+            <div th:if="${actividad != null and !actividad.isEmpty()}">
+                <h2 class="rail-titulo">Actividad reciente</h2>
+                <section class="panel lista-rail">
+                    <div class="fila" th:each="a : ${actividad}">
+                        <div class="crece"><span><b th:text="${a.usuario()}"></b> [[${#strings.toLowerCase(vista.accion(a.accion()))}]]</span><small th:text="${a.detalle()}"></small></div>
+                        <span class="tenue num" th:text="${vista.hora(a.fecha())}"></span>
+                    </div>
+                    <div class="pie-rail"><a class="card-link" th:href="@{/bitacora}">Ver la bitácora</a></div>
+                </section>
+            </div>
+        </aside>
+    </div>
+
+    <th:block th:if="${vista.puede(sesionActual, 'ordenes.crear')}"><dialog th:replace="~{layout :: nuevaOrden}"></dialog></th:block>
+</th:block>
+</body>
+</html>

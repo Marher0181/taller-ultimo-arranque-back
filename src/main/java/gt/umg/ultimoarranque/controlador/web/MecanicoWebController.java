@@ -16,6 +16,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequestMapping("/mecanicos")
 public class MecanicoWebController {
 
+    private static final String LISTA = "redirect:/mecanicos";
+
     private final MecanicoService mecanicoService;
 
     public MecanicoWebController(MecanicoService mecanicoService) {
@@ -25,39 +27,26 @@ public class MecanicoWebController {
     @GetMapping
     public String listar(Model model) {
         model.addAttribute("mecanicos", mecanicoService.listar().stream().map(MecanicoResponse::desde).toList());
-        return "mecanicos/lista";
-    }
-
-    @GetMapping("/nuevo")
-    public String nuevo(Model model) {
-        model.addAttribute("form", null);
-        return "mecanicos/form";
-    }
-
-    @GetMapping("/{id}/editar")
-    public String editar(@PathVariable long id, Model model) {
-        model.addAttribute("form", MecanicoResponse.desde(mecanicoService.obtener(id)));
-        return "mecanicos/form";
+        return "mecanicos";
     }
 
     @PostMapping
     public String registrar(@Valid MecanicoRequest solicitud, RedirectAttributes atributos) {
-        mecanicoService.registrar(solicitud);
-        atributos.addFlashAttribute("mensajeExito", "Mecánico registrado");
-        return "redirect:/mecanicos";
+        Aviso.exito(atributos, "Mecánico registrado", mecanicoService.registrar(solicitud).getNombre());
+        return LISTA;
     }
 
     @PostMapping("/{id}")
     public String actualizar(@PathVariable long id, @Valid MecanicoRequest solicitud, RedirectAttributes atributos) {
-        mecanicoService.actualizar(id, solicitud);
-        atributos.addFlashAttribute("mensajeExito", "Mecánico actualizado");
-        return "redirect:/mecanicos";
+        Aviso.exito(atributos, "Mecánico actualizado", mecanicoService.actualizar(id, solicitud).getNombre());
+        return LISTA;
     }
 
     @PostMapping("/{id}/eliminar")
     public String eliminar(@PathVariable long id, RedirectAttributes atributos) {
+        String nombre = mecanicoService.obtener(id).getNombre();
         mecanicoService.eliminar(id);
-        atributos.addFlashAttribute("mensajeExito", "Mecánico eliminado");
-        return "redirect:/mecanicos";
+        Aviso.exito(atributos, "Mecánico eliminado", nombre);
+        return LISTA;
     }
 }

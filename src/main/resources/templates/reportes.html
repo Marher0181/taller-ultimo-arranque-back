@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: pagina('Reportes', 'reportes', ~{::contenido})}">
+<body>
+<th:block th:fragment="contenido">
+    <div class="title-row">
+        <div>
+            <h1>Reportes</h1>
+            <p class="sub">Los mismos datos que consume la aplicación Android; cada reporte se descarga en PDF.</p>
+        </div>
+        <div class="acciones">
+            <a class="btn" th:href="@{${urlPdf}}" download>Descargar PDF</a>
+        </div>
+    </div>
+
+    <form class="tabs" role="tablist" aria-label="Reportes" th:action="@{/reportes}" method="get">
+        <button th:each="p : ${pestanas}" type="submit" role="tab" name="pestana" th:value="${p.clave()}"
+                th:aria-selected="${pestana == p.clave()}" th:text="${p.texto()}"></button>
+    </form>
+
+    <th:block th:switch="${pestana}">
+        <th:block th:case="'historial'">
+            <form class="filtros" th:action="@{/reportes}" method="get">
+                <input type="hidden" name="pestana" value="historial">
+                <div class="field">
+                    <label for="rp-placa">Placa</label>
+                    <input id="rp-placa" class="input num" name="placa" th:value="${placa}" style="text-transform: uppercase">
+                </div>
+                <button type="submit" class="btn">Consultar</button>
+            </form>
+            <th:block th:if="${historial}" th:with="h=${historial}">
+                <section class="cabecera-orden">
+                    <span th:replace="~{layout :: placa(${h.placa()}, true)}"></span>
+                    <div>
+                        <p class="vehiculo">[[${h.vehiculo()}]]<span class="tenue" th:text="${h.color() != null ? ', ' + h.color() : ''}"></span></p>
+                        <p class="tenue" th:text="|${h.cliente()}, ${h.documentoCliente()}|"></p>
+                    </div>
+                    <div class="respuesta-bloque">
+                        <span class="tenue">Facturado en [[${h.totalOrdenes()}]] [[${h.totalOrdenes() == 1 ? 'orden' : 'órdenes'}]]</span>
+                        <span class="respuesta" th:text="${vista.moneda(h.totalFacturado())}"></span>
+                    </div>
+                </section>
+                <section th:replace="~{reportes :: tablaOrdenes(${h.ordenes()})}"></section>
+            </th:block>
+        </th:block>
+
+        <th:block th:case="'inventario'">
+            <th:block th:if="${inventario}" th:with="inv=${inventario}">
+                <p class="sub-reporte">[[${inv.repuestos().size()}]] repuestos tienen [[${inv.umbral()}]] unidades o menos; [[${inv.agotados()}]] [[${inv.agotados() == 1 ? 'está agotado' : 'están agotados'}]].</p>
+                <section class="panel" style="max-width: 820px">
+                    <div class="table-wrap">
+                        <table class="tabla-movil">
+                            <thead><tr><th>Código</th><th>Repuesto</th><th class="n">Precio</th><th class="n">Existencia</th><th>Nivel</th></tr></thead>
+                            <tbody>
+                            <tr th:each="r : ${inv.repuestos()}">
+                                <td class="tenue ocultar-movil" th:text="${r.codigo()}"></td>
+                                <td class="identidad" th:text="${r.nombre()}"></td>
+                                <td class="n num secundario" th:text="${vista.moneda(r.precio())}"></td>
+                                <td class="n num" th:text="${r.existencia()}"></td>
+                                <td><span th:replace="~{layout :: estado(${r.nivel()})}"></span></td>
+                            </tr>
+                            <tr class="vacio-fila" th:if="${inv.repuestos().isEmpty()}"><td colspan="5">Ningún repuesto tiene bajo inventario.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </th:block>
+        </th:block>
+
+        <th:block th:case="'mecanico'">
+            <form class="filtros" th:action="@{/reportes}" method="get">
+                <input type="hidden" name="pestana" value="mecanico">
+                <div class="field">
+                    <label for="rp-mecanico">Mecánico</label>
+                    <select id="rp-mecanico" class="input" name="idMecanico" data-auto-enviar>
+                        <option value="">Todos</option>
+                        <option th:each="m : ${mecanicos}" th:value="${m.id()}" th:text="|${m.codigo()} ${m.nombre()}|" th:selected="${m.id() == idMecanico}"></option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="rp-estado-mecanico">Estado</label>
+                    <select id="rp-estado-mecanico" class="input" name="estado" data-auto-enviar>
+                        <option value="">Todos</option>
+                        <option th:each="e : ${estados}" th:value="${e}" th:text="${e.etiqueta}" th:selected="${e == estado}"></option>
+                    </select>
+                </div>
+            </form>
+            <section class="grupo-mecanico" th:each="g : ${porMecanico}">
+                <header>
+                    <h2 th:text="${g.nombre()}"></h2>
+                    <span class="tenue" th:text="${g.codigo() + (g.especialidad() != null ? ', ' + g.especialidad() : '')}"></span>
+                    <span class="conteo-linea num">
+                        <span th:each="e : ${estados}">[[${e.etiqueta}]] <b th:text="${g.conteoPorEstado().get(e)}"></b></span>
+                    </span>
+                </header>
+                <th:block th:unless="${g.ordenes().isEmpty()}"><section th:replace="~{reportes :: tablaOrdenes(${g.ordenes()})}"></section></th:block>
+                <p th:if="${g.ordenes().isEmpty()}" class="empty" style="margin: 0">Sin órdenes para este filtro.</p>
+            </section>
+        </th:block>
+
+        <th:block th:case="'ingresos'">
+            <form class="filtros" th:action="@{/reportes}" method="get">
+                <input type="hidden" name="pestana" value="ingresos">
+                <div class="field"><label for="rp-desde">Desde</label><input id="rp-desde" class="input num" type="date" name="desde" th:value="${desde}"></div>
+                <div class="field"><label for="rp-hasta">Hasta</label><input id="rp-hasta" class="input num" type="date" name="hasta" th:value="${hasta}"></div>
+                <button type="submit" class="btn">Aplicar</button>
+            </form>
+            <th:block th:if="${ingresos}" th:with="ing=${ingresos}">
+                <div class="grid con-rail">
+                    <section class="panel" aria-labelledby="titulo-semanas">
+                        <header class="panel-cabeza">
+                            <h2 id="titulo-semanas">Facturado por semana</h2>
+                            <span class="meta" th:text="${rango}"></span>
+                        </header>
+                        <div style="padding: 0 var(--card-pad) var(--card-pad)">
+                            <svg class="grafico" th:viewBox="${grafico.viewBox()}" th:aria-label="'Facturado por semana ' + ${rango}" role="img">
+                                <th:block th:each="m : ${grafico.marcas()}">
+                                    <line th:x1="${grafico.margenIzq()}" th:x2="${grafico.ancho()}" th:y1="${m.y()}" th:y2="${m.y()}" th:class="${m.base()} ? 'base' : 'guia'"/>
+                                    <text th:x="${grafico.margenIzq() - 8}" th:y="${m.y() + 4}" text-anchor="end" class="eje" th:text="${m.texto()}"></text>
+                                </th:block>
+                                <th:block th:each="b : ${grafico.barras()}">
+                                    <rect th:x="${b.x()}" th:y="${b.y()}" th:width="${b.ancho()}" th:height="${b.alto()}" class="barra"><title th:text="${b.detalle()}"></title></rect>
+                                    <text th:x="${b.xTexto()}" th:y="${b.yTexto()}" text-anchor="middle" class="eje" th:text="${b.etiqueta()}"></text>
+                                </th:block>
+                            </svg>
+                        </div>
+                    </section>
+                    <section class="panel" aria-labelledby="titulo-total-ingresos">
+                        <header class="panel-cabeza"><h2 id="titulo-total-ingresos">Total facturado</h2><span class="meta num">[[${ing.cantidadOrdenes()}]] comprobantes</span></header>
+                        <div class="totales">
+                            <div class="total" style="border-top: 0; padding-top: 0"><span class="respuesta" th:text="${vista.moneda(ing.total())}"></span></div>
+                            <div><span>Mano de obra</span><span th:text="${vista.moneda(ing.manoObra())}"></span></div>
+                            <div><span>Repuestos</span><span th:text="${vista.moneda(ing.repuestos())}"></span></div>
+                            <div><span>IVA cobrado</span><span th:text="${vista.moneda(ing.iva())}"></span></div>
+                            <p th:if="${mejorSemana}" class="tenue" style="margin-top: 8px">La semana del [[${mejorSemana.etiqueta()}]] fue la de mayor facturación: [[${vista.moneda(mejorSemana.valor())}]].</p>
+                        </div>
+                    </section>
+                </div>
+                <section class="panel" style="margin-top: var(--gap)">
+                    <div class="table-wrap">
+                        <table class="tabla-movil">
+                            <thead><tr><th>Comprobante</th><th>Emitido</th><th>Orden</th><th>Placa</th><th>Cliente</th><th class="n">Mano de obra</th><th class="n">Repuestos</th><th class="n">IVA</th><th class="n">Total</th></tr></thead>
+                            <tbody>
+                            <tr th:each="i : ${ing.detalle()}">
+                                <td class="tenue ocultar-movil" th:text="${i.numeroComprobante()}"></td>
+                                <td class="num ocultar-movil" th:text="${vista.fecha(i.fechaEmision())}"></td>
+                                <td><a class="identidad" th:href="@{/ordenes/{id}(id=${i.idOrden()})}" th:text="${vista.orden(i.idOrden())}"></a></td>
+                                <td class="ocultar-movil"><span th:replace="~{layout :: placa(${i.placa()}, false)}"></span></td>
+                                <td class="secundario" th:text="${i.cliente()}"></td>
+                                <td class="n num ocultar-movil" th:text="${vista.moneda(i.manoObra())}"></td>
+                                <td class="n num ocultar-movil" th:text="${vista.moneda(i.repuestos())}"></td>
+                                <td class="n num ocultar-movil" th:text="${vista.moneda(i.iva())}"></td>
+                                <td class="n num" th:text="${vista.moneda(i.total())}"></td>
+                            </tr>
+                            <tr class="vacio-fila" th:if="${ing.detalle().isEmpty()}"><td colspan="9">No hay órdenes finalizadas en ese rango de fechas.</td></tr>
+                            </tbody>
+                            <tfoot class="ocultar-movil" th:unless="${ing.detalle().isEmpty()}">
+                            <tr><td colspan="5">Total de [[${ing.cantidadOrdenes()}]] órdenes</td><td class="n num" th:text="${vista.moneda(ing.manoObra())}"></td><td class="n num" th:text="${vista.moneda(ing.repuestos())}"></td><td class="n num" th:text="${vista.moneda(ing.iva())}"></td><td class="n num" th:text="${vista.moneda(ing.total())}"></td></tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </section>
+            </th:block>
+        </th:block>
+
+        <th:block th:case="*">
+            <form class="filtros" th:action="@{/reportes}" method="get">
+                <input type="hidden" name="pestana" value="estado">
+                <div class="field">
+                    <label for="rp-estado">Estado</label>
+                    <select id="rp-estado" class="input" name="estado" data-auto-enviar>
+                        <option value="">Todos</option>
+                        <option th:each="e : ${estados}" th:value="${e}" th:text="${e.etiqueta}" th:selected="${e == estado}"></option>
+                    </select>
+                </div>
+            </form>
+            <th:block th:if="${porEstado}" th:with="r=${porEstado}">
+                <section class="kpis" aria-label="Órdenes por estado">
+                    <div class="kpi" th:each="e : ${estados}">
+                        <div class="kpi-label" th:text="${e.etiqueta}"></div>
+                        <div class="kpi-value" th:text="${r.conteoPorEstado().get(e)}"></div>
+                        <div class="kpi-nota">de [[${totalOrdenes}]] órdenes</div>
+                    </div>
+                </section>
+                <section th:replace="~{reportes :: tablaOrdenes(${r.ordenes()})}"></section>
+            </th:block>
+        </th:block>
+    </th:block>
+
+    <div th:if="${error}" class="panel estado-error" role="alert"><span th:text="${error}"></span><a class="btn texto" th:href="@{/reportes(pestana=${pestana})}">Reintentar</a></div>
+</th:block>
+
+<!-- Tabla de órdenes compartida por los reportes (ng-template #tablaOrdenes) -->
+<section th:fragment="tablaOrdenes(ordenes)" class="panel">
+    <div class="table-wrap">
+        <table class="tabla-movil">
+            <thead><tr><th>Orden</th><th>Placa</th><th>Vehículo y cliente</th><th>Mecánico</th><th>Estado</th><th class="n">Recepción</th><th class="n">Total</th></tr></thead>
+            <tbody>
+            <tr th:each="o : ${ordenes}">
+                <td><a class="identidad" th:href="@{/ordenes/{id}(id=${o.id()})}" th:text="${vista.orden(o.id())}"></a></td>
+                <td><span th:replace="~{layout :: placa(${o.placa()}, false)}"></span></td>
+                <td class="secundario">[[${o.vehiculo()}]]<span class="sub" th:text="${o.cliente()}"></span></td>
+                <td class="ocultar-movil" th:text="${o.mecanico()}"></td>
+                <td><span th:replace="~{layout :: estado(${o.estado()})}"></span></td>
+                <td class="n num ocultar-movil" th:text="${vista.fecha(o.fechaCreacion())}"></td>
+                <td class="n num" th:text="${vista.moneda(o.total())}"></td>
+            </tr>
+            <tr class="vacio-fila" th:if="${ordenes.isEmpty()}"><td colspan="7">No hay órdenes para este filtro.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+</body>
+</html>

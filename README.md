@@ -85,7 +85,7 @@ Prueba local de la imagen: `docker build -t taller . && docker run -p 8080:8080 
 3. Además, en cada solicitud se consulta el usuario en la BD: si fue **desactivado**, cambió su **contraseña** o su **rol**, el token anterior deja de ser válido de inmediato (campo `version_token`).
 4. Al vencer el token se debe iniciar sesión otra vez (no hay renovación automática).
 
-La **interfaz web** (Thymeleaf) usa sesión con formulario de login y protección CSRF en lugar de JWT. Aplica los mismos permisos por rol y también revisa `version_token` en cada solicitud, así que desactivar al usuario o cambiar su contraseña o rol cierra su sesión web.
+La **interfaz web** (Thymeleaf, vistas renderizadas en el servidor) reproduce el diseño del front Angular original: mismas pantallas, estilos, diálogos y avisos. Usa sesión con formulario de login y protección CSRF en lugar de JWT. Aplica los mismos permisos por rol y también revisa `version_token` en cada solicitud, así que desactivar al usuario o cambiar su contraseña o rol cierra su sesión web.
 
 ### Permisos por rol
 

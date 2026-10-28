@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: pagina('Servicios', 'servicios', ~{::contenido})}">
+<body>
+<th:block th:fragment="contenido" th:with="puedeEditar=${vista.puede(sesionActual, 'servicios.editar')}">
+    <div class="title-row">
+        <div>
+            <h1>Servicios</h1>
+            <p class="sub">Trabajos que ofrece el taller. El costo de mano de obra se copia a la orden en el momento de agregarlo.</p>
+        </div>
+        <div class="acciones" th:if="${puedeEditar}"><button type="button" class="btn primary grande" data-abrir="dlg-servicio">Nuevo servicio</button></div>
+    </div>
+
+    <section class="panel" style="max-width: 820px">
+        <div class="table-wrap">
+            <table class="tabla-movil">
+                <thead><tr><th>Código</th><th>Servicio</th><th class="n">Mano de obra</th><th th:if="${puedeEditar}"><span class="oculto">Acciones</span></th></tr></thead>
+                <tbody>
+                <tr th:each="s : ${servicios}">
+                    <td class="tenue ocultar-movil" th:text="${s.codigo()}"></td>
+                    <td><span class="identidad" th:text="${s.descripcion()}"></span></td>
+                    <td class="n num" th:text="${vista.moneda(s.costoManoObra())}"></td>
+                    <td th:if="${puedeEditar}" class="acciones-fila">
+                        <button type="button" class="btn texto" data-abrir="dlg-servicio" data-modo="editar" data-titulo="Editar servicio"
+                                th:data-accion="@{/servicios/{id}(id=${s.id()})}" th:data-valores="${vista.json(s)}">Editar</button>
+                    </td>
+                </tr>
+                <tr class="vacio-fila" th:if="${servicios.isEmpty()}"><td colspan="4">Aún no hay servicios en el catálogo.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <dialog th:if="${puedeEditar}" id="dlg-servicio" class="dialogo" aria-labelledby="dlg-servicio-titulo">
+        <header th:replace="~{layout :: cabezaDialogo('dlg-servicio', 'Nuevo servicio')}"></header>
+        <div class="dialogo-cuerpo">
+            <div class="alerta" role="alert" data-error-de="form-servicio" hidden></div>
+            <form id="form-servicio" class="formulario" th:action="@{/servicios}" method="post" novalidate>
+                <input type="hidden" name="_formulario" value="form-servicio"><input type="hidden" name="_modo"><input type="hidden" name="_titulo">
+                <div class="field">
+                    <label for="se-codigo">Código</label>
+                    <input id="se-codigo" class="input" name="codigo" autocomplete="off" style="text-transform: uppercase" required maxlength="20" data-normalizar="mayusculas">
+                </div>
+                <div class="field">
+                    <label for="se-costo">Mano de obra (Q)</label>
+                    <input id="se-costo" class="input num" type="number" min="0" step="0.01" name="costoManoObra" required>
+                </div>
+                <div class="field completo">
+                    <label for="se-descripcion">Descripción</label>
+                    <input id="se-descripcion" class="input" name="descripcion" autocomplete="off" required maxlength="150">
+                </div>
+            </form>
+        </div>
+        <footer class="dialogo-pie">
+            <button type="button" class="btn" data-cerrar>Cancelar</button>
+            <button type="submit" form="form-servicio" class="btn primary" data-texto-nuevo="Registrar servicio" data-texto-editar="Guardar cambios">Registrar servicio</button>
+        </footer>
+    </dialog>
+</th:block>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: pagina('Usuarios', 'usuarios', ~{::contenido})}">
+<body>
+<th:block th:fragment="contenido">
+    <div class="title-row">
+        <div>
+            <h1>Usuarios</h1>
+            <p class="sub">Los usuarios no se eliminan: se desactivan para conservar quién hizo cada operación.</p>
+        </div>
+        <div class="acciones"><button type="button" class="btn primary grande" data-abrir="dlg-usuario">Nuevo usuario</button></div>
+    </div>
+
+    <section class="panel">
+        <div class="table-wrap">
+            <table class="tabla-movil">
+                <thead><tr><th>Usuario</th><th>Rol</th><th>Mecánico</th><th>Estado</th><th class="n">Último acceso</th><th><span class="oculto">Acciones</span></th></tr></thead>
+                <tbody>
+                <tr th:each="u : ${usuarios}">
+                    <td><span class="identidad" th:text="${u.nombre()}"></span><span class="sub" th:text="${u.username()}"></span></td>
+                    <td class="secundario" th:text="${u.rol().etiqueta}"></td>
+                    <td class="tenue ocultar-movil" th:text="${u.idMecanico() != null ? codigos[u.idMecanico()] : '—'}"></td>
+                    <td><span th:if="${u.activo()}" class="pill pos">Activo</span><span th:unless="${u.activo()}" class="pill">Inactivo</span></td>
+                    <td class="n num ocultar-movil" th:text="${vista.fechaHora(u.ultimoAcceso())}"></td>
+                    <td class="acciones-fila">
+                        <button type="button" class="btn texto" data-abrir="dlg-usuario" data-modo="editar" th:data-titulo="'Editar ' + ${u.username()}"
+                                th:data-accion="@{/usuarios/{id}(id=${u.id()})}" th:data-valores="${vista.json(u)}">Editar</button>
+                        &nbsp;&nbsp;
+                        <button type="button" class="btn texto" data-abrir="dlg-password" th:data-titulo="'Restablecer contraseña de ' + ${u.username()}"
+                                th:data-accion="@{/usuarios/{id}/restablecer-password(id=${u.id()})}" th:data-valores="${vista.json(u)}">Restablecer contraseña</button>
+                        <th:block th:if="${u.id() != sesionActual.id()}">
+                            &nbsp;&nbsp;
+                            <button th:if="${u.activo()}" type="button" class="btn texto peligro" data-abrir="dlg-desactivar" th:data-titulo="'Desactivar ' + ${u.username()}"
+                                    th:data-accion="@{/usuarios/{id}/desactivar(id=${u.id()})}" th:data-valores="${vista.json(u)}">Desactivar</button>
+                            <button th:unless="${u.activo()}" type="button" class="btn texto" data-abrir="dlg-activar" th:data-titulo="'Activar ' + ${u.username()}"
+                                    th:data-accion="@{/usuarios/{id}/activar(id=${u.id()})}" th:data-valores="${vista.json(u)}">Activar</button>
+                        </th:block>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <dialog id="dlg-usuario" class="dialogo" aria-labelledby="dlg-usuario-titulo">
+        <header th:replace="~{layout :: cabezaDialogo('dlg-usuario', 'Nuevo usuario')}"></header>
+        <div class="dialogo-cuerpo">
+            <div class="alerta" role="alert" data-error-de="form-usuario" hidden></div>
+            <form id="form-usuario" class="formulario" th:action="@{/usuarios}" method="post" novalidate>
+                <input type="hidden" name="_formulario" value="form-usuario"><input type="hidden" name="_modo"><input type="hidden" name="_titulo">
+                <div class="field" data-solo="nuevo">
+                    <label for="us-username">Usuario</label>
+                    <input id="us-username" class="input" name="username" aria-describedby="us-username-ayuda" autocomplete="off" autocapitalize="none"
+                           required pattern="[a-z0-9._\-]{3,50}" data-mensaje="De 3 a 50 caracteres: letras, números, punto, guion o guion bajo">
+                    <span class="hint" id="us-username-ayuda">Minúsculas, números, punto o guion.</span>
+                </div>
+                <div class="field" data-solo="nuevo">
+                    <label for="us-password">Contraseña inicial</label>
+                    <input id="us-password" class="input" type="password" name="password" aria-describedby="us-password-ayuda" autocomplete="new-password"
+                           required pattern="(?=.*[A-Za-z])(?=.*\d).{8,72}" data-mensaje="Debe tener entre 8 y 72 caracteres e incluir letras y números">
+                    <span class="hint" id="us-password-ayuda">De 8 a 72 caracteres, con letras y números.</span>
+                </div>
+                <div class="field completo">
+                    <label for="us-nombre">Nombre completo</label>
+                    <input id="us-nombre" class="input" name="nombre" autocomplete="off" required maxlength="120">
+                </div>
+                <div class="field">
+                    <label for="us-rol">Rol</label>
+                    <select id="us-rol" class="input" name="rol" required>
+                        <option th:each="r : ${roles}" th:value="${r}" th:text="${r.etiqueta}"></option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="us-mecanico">Mecánico vinculado</label>
+                    <select id="us-mecanico" class="input" name="idMecanico" aria-describedby="us-mecanico-ayuda" required data-habilitar-si="rol=MECANICO">
+                        <option value="">Ninguno</option>
+                        <option th:each="m : ${mecanicos}" th:value="${m.id()}" th:text="|${m.codigo()} ${m.nombre()}|"
+                                th:data-texto-base="|${m.codigo()} ${m.nombre()}|" th:data-ocupado-por="${ocupados[m.id()]}"></option>
+                    </select>
+                    <span class="hint" id="us-mecanico-ayuda">Solo para el rol Mecánico; un mecánico, un usuario.</span>
+                </div>
+                <p class="tenue field completo" data-solo="editar" hidden>Si cambia el rol, el usuario deberá iniciar sesión de nuevo.</p>
+            </form>
+        </div>
+        <footer class="dialogo-pie">
+            <button type="button" class="btn" data-cerrar>Cancelar</button>
+            <button type="submit" form="form-usuario" class="btn primary" data-texto-nuevo="Crear usuario" data-texto-editar="Guardar cambios">Crear usuario</button>
+        </footer>
+    </dialog>
+
+    <dialog id="dlg-desactivar" class="dialogo" aria-labelledby="dlg-desactivar-titulo">
+        <header th:replace="~{layout :: cabezaDialogo('dlg-desactivar', 'Desactivar')}"></header>
+        <div class="dialogo-cuerpo">
+            <div class="alerta" role="alert" data-error-de="form-desactivar" hidden></div>
+            <form id="form-desactivar" th:action="@{/usuarios}" method="post"><input type="hidden" name="_formulario" value="form-desactivar"><input type="hidden" name="_titulo"></form>
+            <p><span data-texto="nombre"></span> no podrá iniciar sesión y su sesión abierta dejará de ser válida de inmediato.</p>
+        </div>
+        <footer class="dialogo-pie">
+            <button type="button" class="btn" data-cerrar>Volver</button>
+            <button type="submit" form="form-desactivar" class="btn peligro lleno">Desactivar usuario</button>
+        </footer>
+    </dialog>
+
+    <dialog id="dlg-activar" class="dialogo" aria-labelledby="dlg-activar-titulo">
+        <header th:replace="~{layout :: cabezaDialogo('dlg-activar', 'Activar')}"></header>
+        <div class="dialogo-cuerpo">
+            <div class="alerta" role="alert" data-error-de="form-activar" hidden></div>
+            <form id="form-activar" th:action="@{/usuarios}" method="post"><input type="hidden" name="_formulario" value="form-activar"><input type="hidden" name="_titulo"></form>
+            <p><span data-texto="nombre"></span> podrá volver a iniciar sesión con su contraseña actual.</p>
+        </div>
+        <footer class="dialogo-pie">
+            <button type="button" class="btn" data-cerrar>Volver</button>
+            <button type="submit" form="form-activar" class="btn primary">Activar usuario</button>
+        </footer>
+    </dialog>
+
+    <dialog id="dlg-password" class="dialogo" aria-labelledby="dlg-password-titulo">
+        <header th:replace="~{layout :: cabezaDialogo('dlg-password', 'Restablecer contraseña')}"></header>
+        <div class="dialogo-cuerpo">
+            <div class="alerta" role="alert" data-error-de="form-password" hidden></div>
+            <p>La sesión abierta de <span data-texto="nombre"></span> dejará de ser válida.</p>
+            <form id="form-password" th:action="@{/usuarios}" method="post" novalidate>
+                <input type="hidden" name="_formulario" value="form-password"><input type="hidden" name="_titulo">
+                <div class="field">
+                    <label for="us-password-nueva">Contraseña nueva</label>
+                    <input id="us-password-nueva" class="input" type="password" name="password" autocomplete="new-password" aria-describedby="us-password-nueva-ayuda"
+                           required pattern="(?=.*[A-Za-z])(?=.*\d).{8,72}" data-mensaje="La contraseña debe tener entre 8 y 72 caracteres e incluir letras y números">
+                    <span class="hint" id="us-password-nueva-ayuda">De 8 a 72 caracteres, con letras y números.</span>
+                </div>
+            </form>
+        </div>
+        <footer class="dialogo-pie">
+            <button type="button" class="btn" data-cerrar>Cancelar</button>
+            <button type="submit" form="form-password" class="btn primary">Restablecer contraseña</button>
+        </footer>
+    </dialog>
+</th:block>
+</body>
+</html>
